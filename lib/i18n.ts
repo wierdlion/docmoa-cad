@@ -4,7 +4,7 @@ export type Locale = (typeof LOCALES)[number];
 export const DEFAULT_LOCALE: Locale = "en";
 export const isLocale = (x: string): x is Locale => (LOCALES as readonly string[]).includes(x);
 export const isRtl = (l: Locale) => l === "ar";
-/** 본체와 같은 규칙: 영어는 루트, 나머지는 로케일 프리픽스. */
+/** 이 앱의 canonical은 본체 랜딩(docmoa.com/cad)이다. 앱 자체는 색인에서 뺀다. */
 export const pageUrl = (l: Locale) => (l === DEFAULT_LOCALE ? "https://docmoa.com/cad" : `https://docmoa.com/${l}/cad`);
 
 /** {n}, {list}는 화면에서 채운다. 함수로 두면 서버에서 클라이언트로 못 넘긴다. */
