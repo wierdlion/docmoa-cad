@@ -6,6 +6,7 @@ import { fitViewBox, type Box } from "@/lib/fit";
 import { toPdf, toPng } from "@/lib/export";
 import { isEmpty, type Model3 } from "@/lib/three-d";
 import { fill, type Dict, type Locale } from "@/lib/i18n";
+import { AdRail } from "@/components/ad-rail";
 import dynamic from "next/dynamic";
 
 // three.js는 3D를 실제로 볼 때만 받는다.
@@ -211,6 +212,7 @@ export default function Viewer({ locale, t }: { locale: Locale; t: Dict }) {
             </div>
           )}
         </div>
+        <AdRail label={t.ad} />
       </div>
     </div>
   );
