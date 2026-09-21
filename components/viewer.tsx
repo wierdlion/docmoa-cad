@@ -4,6 +4,11 @@ import { useCallback, useRef, useState } from "react";
 import { readCad } from "@/lib/dwg";
 import { fitViewBox, type Box } from "@/lib/fit";
 import { toPdf, toPng } from "@/lib/export";
+import { isEmpty, type Model3 } from "@/lib/three-d";
+import dynamic from "next/dynamic";
+
+// three.js는 3D를 실제로 볼 때만 받는다.
+const Viewer3d = dynamic(() => import("@/components/viewer3d"), { ssr: false });
 
 
 
@@ -16,6 +21,8 @@ export default function Viewer() {
   const [error, setError] = useState("");
   const [ready, setReady] = useState(false);
   const [showLayers, setShowLayers] = useState(false);
+  const [model3, setModel3] = useState<Model3 | null>(null);
+  const [in3d, setIn3d] = useState(false);
   const [saving, setSaving] = useState("");
   const [layers, setLayers] = useState<string[]>([]);
   const [off, setOff] = useState<Set<string>>(new Set());
@@ -26,7 +33,7 @@ export default function Viewer() {
   };
 
   const open = useCallback(async (file: File) => {
-    setBusy(true); setError(""); setName(file.name); setOff(new Set()); setReady(false);
+    setBusy(true); setError(""); setName(file.name); setOff(new Set()); setReady(false); setIn3d(false); setModel3(null);
     try {
       const cad = await readCad(await file.arrayBuffer(), file.name);
       const doc = new DOMParser().parseFromString(cad.svg, "image/svg+xml");
@@ -46,6 +53,7 @@ export default function Viewer() {
       const fitted = fitViewBox(svg);
       if (fitted) apply(fitted);
       setLayers(cad.layers);
+      setModel3(cad.model3);
       setReady(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "파일을 열지 못했습니다.");
@@ -152,6 +160,11 @@ export default function Viewer() {
               <button onClick={() => setShowLayers((v) => !v)}
                 className="rounded border border-slate-600 px-3 py-1.5 text-sm hover:bg-slate-800 sm:hidden">레이어</button>
             )}
+            {model3 && !isEmpty(model3) && (
+              <button onClick={() => setIn3d((v) => !v)}
+                className={`rounded px-3 py-1.5 text-sm ${in3d ? "bg-indigo-600 hover:bg-indigo-500" : "border border-slate-600 hover:bg-slate-800"}`}>
+                {in3d ? "2D 도면" : "3D 보기"}</button>
+            )}
             <button onClick={() => { const f = svgRef.current && fitViewBox(svgRef.current); if (f) apply(f); }}
               className="rounded border border-slate-600 px-3 py-1.5 text-sm hover:bg-slate-800">전체 보기</button>
             <button onClick={() => download("png")} disabled={!!saving}
@@ -176,8 +189,22 @@ export default function Viewer() {
             ))}
           </aside>
         )}
-        <div ref={host} onWheel={zoom} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
-          className="min-w-0 flex-1 touch-none bg-black [&>svg]:h-full [&>svg]:w-full" />
+        <div className="relative min-w-0 flex-1">
+          <div ref={host} onWheel={zoom} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
+            className={`h-full w-full touch-none bg-black [&>svg]:h-full [&>svg]:w-full ${in3d ? "invisible" : ""}`} />
+          {in3d && model3 && (
+            <div className="absolute inset-0">
+              <Viewer3d model={model3} />
+              {(model3.wireSolids > 0 || model3.emptySolids > 0 || Object.keys(model3.skipped).length > 0) && (
+                <p className="absolute bottom-3 left-3 right-3 rounded bg-slate-900/90 px-3 py-2 text-xs text-amber-300">
+                  {model3.wireSolids > 0 && `입체 ${model3.wireSolids}개는 모서리만 표시됩니다(면은 그리지 않음). `}
+                  {model3.emptySolids > 0 && `입체 ${model3.emptySolids}개는 모서리가 없어 표시되지 않았습니다. `}
+                  {Object.keys(model3.skipped).length > 0 && `지원하지 않는 곡선: ${Object.keys(model3.skipped).join(", ")}.`}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
