@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { LOCALES, DEFAULT_LOCALE, getDict, isLocale, isRtl, pageUrl, type Locale } from "@/lib/i18n";
-import "../globals.css";
+import "../../globals.css";
 
-/** 영어는 /cad, 나머지는 /cad/<로케일>. 본체가 docmoa.com/<로케일>/cad 를 이리로 넘긴다. */
+/** 영어는 /cad/view, 나머지는 /cad/view/<로케일>. 공개 주소와 앱 내부 경로를 같게 둔다 —
+ *  다르면 하이드레이션 뒤 Next 라우터가 제 경로로 URL을 되돌린다. */
 export const dynamicParams = false;
 export function generateStaticParams() {
   return [{ loc: [] as string[] }, ...LOCALES.filter((l) => l !== DEFAULT_LOCALE).map((l) => ({ loc: [l] }))];
@@ -16,10 +17,9 @@ export async function generateMetadata({ params }: { params: Promise<{ loc?: str
   return {
     title: t.title,
     description: t.desc,
-    alternates: {
-      canonical: pageUrl(locale),
-      languages: { ...Object.fromEntries(LOCALES.map((l) => [l, pageUrl(l)])), "x-default": pageUrl(DEFAULT_LOCALE) },
-    },
+    // 검색 결과는 본체 랜딩(/cad)이 받는다. 빈 캔버스뿐인 이 페이지가 대신 잡히면 안 된다.
+    robots: { index: false, follow: true },
+    alternates: { canonical: pageUrl(locale) },
   };
 }
 
