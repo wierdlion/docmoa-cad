@@ -11,7 +11,7 @@ export const pageUrl = (l: Locale) => (l === DEFAULT_LOCALE ? "https://docmoa.co
 export type Dict = {
   title: string; desc: string;
   open: string; opening: string; layers: string; view3d: string; view2d: string; fit: string;
-  png: string; pdf: string; saving: string; making: string;
+  png: string; pdf: string; saving: string; making: string; ad: string;
   err: { open: string; read: string; draw: string; save: string; png: string; font: string };
   wire: string; empty: string; skipped: string;
 };
@@ -21,6 +21,7 @@ const en: Dict = {
   desc: "Open DWG and DXF drawings in your browser — no AutoCAD. No login, no size limit, and the file never leaves your device.",
   open: "Open drawing", opening: "Opening…", layers: "Layers", view3d: "3D view", view2d: "2D drawing", fit: "Fit to screen",
   png: "Save PNG", pdf: "Save PDF", saving: "Saving…", making: "Building…",
+  ad: "Ad",
   err: {
     open: "Could not open the file.",
     read: "Could not read the drawing. The file is damaged or in an unsupported format.",
@@ -39,6 +40,7 @@ const ko: Dict = {
   desc: "AutoCAD 없이 브라우저에서 DWG·DXF 도면을 엽니다. 로그인·용량 제한 없음, 파일은 서버로 전송되지 않습니다.",
   open: "도면 열기", opening: "여는 중…", layers: "레이어", view3d: "3D 보기", view2d: "2D 도면", fit: "전체 보기",
   png: "PNG 저장", pdf: "PDF 저장", saving: "저장 중…", making: "만드는 중…",
+  ad: "광고",
   err: {
     open: "파일을 열지 못했습니다.",
     read: "도면을 읽지 못했습니다. 파일이 손상됐거나 지원하지 않는 형식입니다.",
@@ -57,6 +59,7 @@ const ja: Dict = {
   desc: "AutoCADなしでブラウザーからDWG・DXF図面を開きます。ログイン不要、容量制限なし、ファイルは端末の外に出ません。",
   open: "図面を開く", opening: "読み込み中…", layers: "レイヤー", view3d: "3D表示", view2d: "2D図面", fit: "全体表示",
   png: "PNGで保存", pdf: "PDFで保存", saving: "保存中…", making: "作成中…",
+  ad: "広告",
   err: {
     open: "ファイルを開けませんでした。",
     read: "図面を読み取れませんでした。ファイルが壊れているか、対応していない形式です。",
@@ -75,6 +78,7 @@ const zh: Dict = {
   desc: "无需 AutoCAD，在浏览器中打开 DWG、DXF 图纸。无需登录、没有大小限制，文件不会离开你的设备。",
   open: "打开图纸", opening: "正在打开…", layers: "图层", view3d: "三维视图", view2d: "二维图纸", fit: "适应窗口",
   png: "保存 PNG", pdf: "保存 PDF", saving: "正在保存…", making: "正在生成…",
+  ad: "广告",
   err: {
     open: "无法打开文件。",
     read: "无法读取图纸。文件已损坏或格式不受支持。",
@@ -93,6 +97,7 @@ const zhTW: Dict = {
   desc: "不需要 AutoCAD，直接在瀏覽器開啟 DWG、DXF 圖面。免登入、無容量限制，檔案不會離開你的裝置。",
   open: "開啟圖面", opening: "開啟中…", layers: "圖層", view3d: "3D 檢視", view2d: "2D 圖面", fit: "顯示全部",
   png: "儲存 PNG", pdf: "儲存 PDF", saving: "儲存中…", making: "產生中…",
+  ad: "廣告",
   err: {
     open: "無法開啟檔案。",
     read: "無法讀取圖面。檔案已損毀或格式不支援。",
@@ -111,6 +116,7 @@ const es: Dict = {
   desc: "Abre planos DWG y DXF en el navegador, sin AutoCAD. Sin registro ni límite de tamaño, y el archivo nunca sale de tu dispositivo.",
   open: "Abrir plano", opening: "Abriendo…", layers: "Capas", view3d: "Vista 3D", view2d: "Plano 2D", fit: "Ajustar a pantalla",
   png: "Guardar PNG", pdf: "Guardar PDF", saving: "Guardando…", making: "Generando…",
+  ad: "Publicidad",
   err: {
     open: "No se pudo abrir el archivo.",
     read: "No se pudo leer el plano. El archivo está dañado o el formato no es compatible.",
@@ -129,6 +135,7 @@ const pt: Dict = {
   desc: "Abra desenhos DWG e DXF no navegador, sem AutoCAD. Sem login nem limite de tamanho, e o arquivo não sai do seu dispositivo.",
   open: "Abrir desenho", opening: "Abrindo…", layers: "Camadas", view3d: "Vista 3D", view2d: "Desenho 2D", fit: "Ajustar à tela",
   png: "Salvar PNG", pdf: "Salvar PDF", saving: "Salvando…", making: "Gerando…",
+  ad: "Publicidade",
   err: {
     open: "Não foi possível abrir o arquivo.",
     read: "Não foi possível ler o desenho. O arquivo está danificado ou o formato não é compatível.",
@@ -147,6 +154,7 @@ const fr: Dict = {
   desc: "Ouvrez vos plans DWG et DXF dans le navigateur, sans AutoCAD. Sans compte ni limite de taille, et le fichier ne quitte pas votre appareil.",
   open: "Ouvrir un plan", opening: "Ouverture…", layers: "Calques", view3d: "Vue 3D", view2d: "Plan 2D", fit: "Ajuster à l'écran",
   png: "Enregistrer en PNG", pdf: "Enregistrer en PDF", saving: "Enregistrement…", making: "Génération…",
+  ad: "Publicité",
   err: {
     open: "Impossible d'ouvrir le fichier.",
     read: "Impossible de lire le plan. Le fichier est endommagé ou le format n'est pas pris en charge.",
@@ -165,6 +173,7 @@ const de: Dict = {
   desc: "DWG- und DXF-Zeichnungen im Browser öffnen, ganz ohne AutoCAD. Ohne Anmeldung, ohne Größenlimit, und die Datei verlässt Ihr Gerät nicht.",
   open: "Zeichnung öffnen", opening: "Wird geöffnet…", layers: "Layer", view3d: "3D-Ansicht", view2d: "2D-Zeichnung", fit: "Alles anzeigen",
   png: "Als PNG speichern", pdf: "Als PDF speichern", saving: "Wird gespeichert…", making: "Wird erstellt…",
+  ad: "Anzeige",
   err: {
     open: "Die Datei konnte nicht geöffnet werden.",
     read: "Die Zeichnung konnte nicht gelesen werden. Die Datei ist beschädigt oder das Format wird nicht unterstützt.",
@@ -183,6 +192,7 @@ const it: Dict = {
   desc: "Apri disegni DWG e DXF nel browser, senza AutoCAD. Senza registrazione né limiti di dimensione, e il file non lascia il tuo dispositivo.",
   open: "Apri disegno", opening: "Apertura…", layers: "Livelli", view3d: "Vista 3D", view2d: "Disegno 2D", fit: "Adatta allo schermo",
   png: "Salva PNG", pdf: "Salva PDF", saving: "Salvataggio…", making: "Creazione…",
+  ad: "Pubblicità",
   err: {
     open: "Impossibile aprire il file.",
     read: "Impossibile leggere il disegno. Il file è danneggiato o il formato non è supportato.",
@@ -201,6 +211,7 @@ const ru: Dict = {
   desc: "Открывайте чертежи DWG и DXF в браузере без AutoCAD. Без регистрации и ограничений по размеру, файл не покидает ваше устройство.",
   open: "Открыть чертёж", opening: "Открываем…", layers: "Слои", view3d: "3D-вид", view2d: "2D-чертёж", fit: "Вписать в экран",
   png: "Сохранить PNG", pdf: "Сохранить PDF", saving: "Сохраняем…", making: "Создаём…",
+  ad: "Реклама",
   err: {
     open: "Не удалось открыть файл.",
     read: "Не удалось прочитать чертёж. Файл повреждён или формат не поддерживается.",
@@ -219,6 +230,7 @@ const id: Dict = {
   desc: "Buka gambar DWG dan DXF langsung di browser, tanpa AutoCAD. Tanpa login, tanpa batas ukuran, dan berkas tidak meninggalkan perangkat Anda.",
   open: "Buka gambar", opening: "Membuka…", layers: "Layer", view3d: "Tampilan 3D", view2d: "Gambar 2D", fit: "Paskan ke layar",
   png: "Simpan PNG", pdf: "Simpan PDF", saving: "Menyimpan…", making: "Membuat…",
+  ad: "Iklan",
   err: {
     open: "Tidak dapat membuka berkas.",
     read: "Tidak dapat membaca gambar. Berkas rusak atau formatnya tidak didukung.",
@@ -237,6 +249,7 @@ const vi: Dict = {
   desc: "Mở bản vẽ DWG và DXF ngay trên trình duyệt, không cần AutoCAD. Không đăng nhập, không giới hạn dung lượng, tệp không rời khỏi thiết bị của bạn.",
   open: "Mở bản vẽ", opening: "Đang mở…", layers: "Lớp", view3d: "Xem 3D", view2d: "Bản vẽ 2D", fit: "Vừa màn hình",
   png: "Lưu PNG", pdf: "Lưu PDF", saving: "Đang lưu…", making: "Đang tạo…",
+  ad: "Quảng cáo",
   err: {
     open: "Không mở được tệp.",
     read: "Không đọc được bản vẽ. Tệp bị hỏng hoặc định dạng không được hỗ trợ.",
@@ -255,6 +268,7 @@ const th: Dict = {
   desc: "เปิดไฟล์แบบ DWG และ DXF ในเบราว์เซอร์ได้เลย ไม่ต้องมี AutoCAD ไม่ต้องล็อกอิน ไม่จำกัดขนาด และไฟล์ไม่ถูกส่งออกจากเครื่องของคุณ",
   open: "เปิดแบบแปลน", opening: "กำลังเปิด…", layers: "เลเยอร์", view3d: "มุมมอง 3 มิติ", view2d: "แบบ 2 มิติ", fit: "พอดีหน้าจอ",
   png: "บันทึก PNG", pdf: "บันทึก PDF", saving: "กำลังบันทึก…", making: "กำลังสร้าง…",
+  ad: "โฆษณา",
   err: {
     open: "เปิดไฟล์ไม่สำเร็จ",
     read: "อ่านแบบแปลนไม่ได้ ไฟล์เสียหายหรือเป็นรูปแบบที่ไม่รองรับ",
@@ -273,6 +287,7 @@ const tr: Dict = {
   desc: "DWG ve DXF çizimlerini AutoCAD olmadan tarayıcıda açın. Üyelik yok, boyut sınırı yok ve dosya cihazınızdan çıkmaz.",
   open: "Çizim aç", opening: "Açılıyor…", layers: "Katmanlar", view3d: "3B görünüm", view2d: "2B çizim", fit: "Ekrana sığdır",
   png: "PNG kaydet", pdf: "PDF kaydet", saving: "Kaydediliyor…", making: "Oluşturuluyor…",
+  ad: "Reklam",
   err: {
     open: "Dosya açılamadı.",
     read: "Çizim okunamadı. Dosya bozuk ya da biçimi desteklenmiyor.",
@@ -291,6 +306,7 @@ const ar: Dict = {
   desc: "افتح مخططات DWG وDXF في المتصفح دون AutoCAD. بلا تسجيل دخول ولا حد للحجم، والملف لا يغادر جهازك.",
   open: "فتح مخطط", opening: "جارٍ الفتح…", layers: "الطبقات", view3d: "عرض ثلاثي الأبعاد", view2d: "مخطط ثنائي الأبعاد", fit: "ملء الشاشة",
   png: "حفظ PNG", pdf: "حفظ PDF", saving: "جارٍ الحفظ…", making: "جارٍ الإنشاء…",
+  ad: "إعلان",
   err: {
     open: "تعذّر فتح الملف.",
     read: "تعذّرت قراءة المخطط. الملف تالف أو تنسيقه غير مدعوم.",
@@ -309,6 +325,7 @@ const hi: Dict = {
   desc: "AutoCAD के बिना ब्राउज़र में ही DWG और DXF ड्रॉइंग खोलें। न लॉगिन, न आकार की सीमा, और फ़ाइल आपके डिवाइस से बाहर नहीं जाती।",
   open: "ड्रॉइंग खोलें", opening: "खोला जा रहा है…", layers: "लेयर", view3d: "3D दृश्य", view2d: "2D ड्रॉइंग", fit: "स्क्रीन में फ़िट करें",
   png: "PNG सहेजें", pdf: "PDF सहेजें", saving: "सहेजा जा रहा है…", making: "बनाया जा रहा है…",
+  ad: "विज्ञापन",
   err: {
     open: "फ़ाइल नहीं खुल सकी।",
     read: "ड्रॉइंग पढ़ी नहीं जा सकी। फ़ाइल ख़राब है या प्रारूप समर्थित नहीं है।",
@@ -327,6 +344,7 @@ const pl: Dict = {
   desc: "Otwieraj rysunki DWG i DXF w przeglądarce, bez AutoCAD-a. Bez logowania i limitu rozmiaru, a plik nie opuszcza Twojego urządzenia.",
   open: "Otwórz rysunek", opening: "Otwieranie…", layers: "Warstwy", view3d: "Widok 3D", view2d: "Rysunek 2D", fit: "Dopasuj do ekranu",
   png: "Zapisz PNG", pdf: "Zapisz PDF", saving: "Zapisywanie…", making: "Tworzenie…",
+  ad: "Reklama",
   err: {
     open: "Nie udało się otworzyć pliku.",
     read: "Nie udało się odczytać rysunku. Plik jest uszkodzony lub format nie jest obsługiwany.",
@@ -345,6 +363,7 @@ const nl: Dict = {
   desc: "Open DWG- en DXF-tekeningen in de browser, zonder AutoCAD. Geen account, geen groottelimiet, en het bestand blijft op uw apparaat.",
   open: "Tekening openen", opening: "Bezig met openen…", layers: "Lagen", view3d: "3D-weergave", view2d: "2D-tekening", fit: "Passend maken",
   png: "PNG opslaan", pdf: "PDF opslaan", saving: "Bezig met opslaan…", making: "Bezig met maken…",
+  ad: "Advertentie",
   err: {
     open: "Kan het bestand niet openen.",
     read: "Kan de tekening niet lezen. Het bestand is beschadigd of de indeling wordt niet ondersteund.",
@@ -363,6 +382,7 @@ const ms: Dict = {
   desc: "Buka lukisan DWG dan DXF terus dalam pelayar, tanpa AutoCAD. Tiada log masuk, tiada had saiz, dan fail tidak meninggalkan peranti anda.",
   open: "Buka lukisan", opening: "Sedang dibuka…", layers: "Lapisan", view3d: "Paparan 3D", view2d: "Lukisan 2D", fit: "Muat skrin",
   png: "Simpan PNG", pdf: "Simpan PDF", saving: "Menyimpan…", making: "Menjana…",
+  ad: "Iklan",
   err: {
     open: "Fail tidak dapat dibuka.",
     read: "Lukisan tidak dapat dibaca. Fail rosak atau formatnya tidak disokong.",

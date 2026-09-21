@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { LOCALES, DEFAULT_LOCALE, getDict, isLocale, isRtl, pageUrl, type Locale } from "@/lib/i18n";
 import "../../globals.css";
 
@@ -8,6 +9,8 @@ export const dynamicParams = false;
 export function generateStaticParams() {
   return [{ loc: [] as string[] }, ...LOCALES.filter((l) => l !== DEFAULT_LOCALE).map((l) => ({ loc: [l] }))];
 }
+
+const ADS = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
 
 const localeOf = (loc?: string[]): Locale => (loc?.[0] && isLocale(loc[0]) ? loc[0] : DEFAULT_LOCALE);
 
@@ -30,7 +33,11 @@ export default async function RootLayout({ children, params }: { children: React
   const locale = localeOf((await params).loc);
   return (
     <html lang={locale} dir={isRtl(locale) ? "rtl" : "ltr"}>
-      <body className="font-sans antialiased">{children}</body>
+      <body className="font-sans antialiased">
+        {children}
+        {/* 뷰어가 먼저 뜨는 게 우선이라 afterInteractive. 광고는 도면 옆 레일에서만 쓴다. */}
+        {ADS && <Script src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADS}`} crossOrigin="anonymous" strategy="afterInteractive" />}
+      </body>
     </html>
   );
 }
