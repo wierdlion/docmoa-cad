@@ -20,7 +20,7 @@ export async function toPng(svg: SVGSVGElement, box: Box, filename: string, long
   const img = new Image();
   const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(clone)], { type: "image/svg+xml" }));
   try {
-    await new Promise((ok, fail) => { img.onload = ok; img.onerror = () => fail(new Error("그림으로 바꾸지 못했습니다.")); img.src = url; });
+    await new Promise((ok, fail) => { img.onload = ok; img.onerror = () => fail(new Error("png")); img.src = url; });
     const canvas = Object.assign(document.createElement("canvas"), { width: w, height: h });
     const ctx = canvas.getContext("2d")!;
     ctx.fillStyle = "#000";
@@ -34,14 +34,34 @@ export async function toPng(svg: SVGSVGElement, box: Box, filename: string, long
 }
 
 /**
- * jsPDF 기본 폰트는 Latin-1만 담아서 한글이 전부 깨진다. 한글 폰트를 통째로 심어야 하는데
- * 2MB라 PDF를 실제로 누를 때만 받는다. (OFL, public/fonts/)
+ * jsPDF 기본 폰트는 Latin-1만 담아서 한글·일본어·태국어가 전부 깨진다. 도면에 실제로 쓰인 글자를
+ * 보고 맞는 폰트 하나를 심는다. 큰 건 10MB라 PDF를 누를 때만 받는다(전부 OFL, public/fonts/).
+ * jsPDF가 쓰인 글자만 추려 담으므로 결과 PDF는 수백 KB에서 끝난다.
+ * ponytail: 한 도면에 여러 문자를 섞어 쓰면 폰트는 그중 하나만 고른다. 섞인 도면이 문제가 되면 그때 나눈다.
  */
-let korean: Promise<string> | null = null;
-const koreanFont = () =>
-  (korean ??= fetch("/cad/fonts/NanumGothic-Regular.ttf")
+const SCRIPTS: { font: string; re: RegExp }[] = [
+  { font: "NotoSansJP-Regular", re: /[\u3040-\u30ff]/ },        // 가나가 있으면 일본어
+  { font: "NanumGothic-Regular", re: /[\uac00-\ud7a3]/ },       // 한글
+  { font: "NotoSansThai-Regular", re: /[\u0e00-\u0e7f]/ },
+  { font: "NotoSansArabic-Regular", re: /[\u0600-\u06ff]/ },
+  { font: "NotoSansDevanagari-Regular", re: /[\u0900-\u097f]/ },
+];
+/** 한자는 글자만 봐서는 어느 쪽인지 못 가른다. 화면 언어를 힌트로 쓴다. */
+const HAN: Record<string, string> = { ja: "NotoSansJP-Regular", ko: "NanumGothic-Regular", "zh-tw": "NotoSansTC-Regular" };
+
+function pickFont(text: string, locale: string) {
+  for (const s of SCRIPTS) if (s.re.test(text)) return s.font;
+  if (/[\u3400-\u9fff\uf900-\ufaff]/.test(text)) return HAN[locale] ?? "NotoSansSC-Regular";
+  return "NotoSans-Regular"; // 라틴·키릴·그리스·베트남어
+}
+
+const fonts = new Map<string, Promise<string>>();
+const loadFont = (name: string) => {
+  const cached = fonts.get(name);
+  if (cached) return cached;
+  const p = fetch(`/cad/fonts/${name}.ttf`)
     .then((r) => {
-      if (!r.ok) throw new Error("한글 폰트를 받지 못했습니다.");
+      if (!r.ok) throw new Error("font");
       return r.arrayBuffer();
     })
     .then((b) => {
@@ -51,16 +71,20 @@ const koreanFont = () =>
       for (let i = 0; i < u.length; i += 0x8000) bin += String.fromCharCode(...u.subarray(i, i + 0x8000));
       return btoa(bin);
     })
-    .catch((e) => { korean = null; throw e; }));
+    .catch((e) => { fonts.delete(name); throw e; });
+  fonts.set(name, p);
+  return p;
+};
 
 /** 벡터 PDF. 확대해도 선이 뭉개지지 않는 게 래스터 대비 유일한 이유다. */
-export async function toPdf(svg: SVGSVGElement, box: Box, filename: string) {
-  const [{ jsPDF }, { svg2pdf }, font] = await Promise.all([import("jspdf"), import("svg2pdf.js"), koreanFont()]);
+export async function toPdf(svg: SVGSVGElement, box: Box, filename: string, locale = "en") {
+  const name = pickFont([...svg.querySelectorAll("text")].map((t) => t.textContent ?? "").join(""), locale);
+  const [{ jsPDF }, { svg2pdf }, font] = await Promise.all([import("jspdf"), import("svg2pdf.js"), loadFont(name)]);
   const landscape = box.w >= box.h;
   const pdf = new jsPDF({ orientation: landscape ? "landscape" : "portrait", unit: "mm", format: "a4" });
-  pdf.addFileToVFS("NanumGothic.ttf", font);
-  pdf.addFont("NanumGothic.ttf", "NanumGothic", "normal");
-  pdf.setFont("NanumGothic");
+  pdf.addFileToVFS(`${name}.ttf`, font);
+  pdf.addFont(`${name}.ttf`, name, "normal");
+  pdf.setFont(name);
   const pw = landscape ? 297 : 210, ph = landscape ? 210 : 297, margin = 10;
   const scale = Math.min((pw - margin * 2) / box.w, (ph - margin * 2) / box.h);
   const w = box.w * scale, h = box.h * scale;
@@ -72,7 +96,7 @@ export async function toPdf(svg: SVGSVGElement, box: Box, filename: string) {
   for (const el of clone.querySelectorAll<SVGElement>("[stroke]")) el.setAttribute("stroke", "#000");
   for (const el of clone.querySelectorAll<SVGElement>("text")) {
     el.setAttribute("fill", "#000");
-    el.setAttribute("font-family", "NanumGothic");
+    el.setAttribute("font-family", name);
   }
 
   document.body.appendChild(clone);

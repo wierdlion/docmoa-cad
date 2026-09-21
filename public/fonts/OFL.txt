@@ -1,3 +1,11 @@
+이 폴더의 폰트는 모두 SIL Open Font License 1.1로 배포된다. 아래 라이선스 전문이 둘 다에 적용된다.
+
+- NanumGothic-Regular.ttf — Copyright (c) 2010, NHN Corporation
+- NotoSans*.ttf (Noto Sans, JP, SC, TC, Thai, Arabic, Devanagari)
+  Copyright 2012-2023 The Noto Project Authors (https://github.com/notofonts)
+
+--------------------------------------------------------------------------
+
 Copyright (c) 2010, NHN Corporation (http://www.nhncorp.com),
 with Reserved Font Name Nanum, Naver Nanum, NanumGothic, Naver 
 NanumGothic, NanumMyeongjo, Naver NanumMyeongjo, NanumBrush, Naver

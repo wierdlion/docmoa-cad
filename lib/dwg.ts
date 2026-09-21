@@ -24,7 +24,7 @@ export async function readCad(buf: ArrayBuffer, filename: string, wasmDir = WASM
   const lib = await LibreDwg.create(wasmDir);
   const type = /\.dxf$/i.test(filename) ? Dwg_File_Type.DXF : Dwg_File_Type.DWG;
   const dwg = lib.dwg_read_data(buf, type);
-  if (dwg == null) throw new Error("도면을 읽지 못했습니다. 파일이 손상됐거나 지원하지 않는 형식입니다.");
+  if (dwg == null) throw new Error("read");
   const db = lib.convert(dwg);
   // 3DSOLID의 ACIS 데이터는 WASM 메모리를 가리키는 주소라서, 해제 전에 읽어야 한다.
   const model3 = extract3d(db.entities ?? [], (ptr) => lib.UTF8ToString(ptr));
