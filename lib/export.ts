@@ -49,7 +49,7 @@ const SCRIPTS: { font: string; re: RegExp }[] = [
 /** 한자는 글자만 봐서는 어느 쪽인지 못 가른다. 화면 언어를 힌트로 쓴다. */
 const HAN: Record<string, string> = { ja: "NotoSansJP-Regular", ko: "NanumGothic-Regular", "zh-tw": "NotoSansTC-Regular" };
 
-function pickFont(text: string, locale: string) {
+export function pickFont(text: string, locale: string) {
   for (const s of SCRIPTS) if (s.re.test(text)) return s.font;
   if (/[\u3400-\u9fff\uf900-\ufaff]/.test(text)) return HAN[locale] ?? "NotoSansSC-Regular";
   return "NotoSans-Regular"; // 라틴·키릴·그리스·베트남어
