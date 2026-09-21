@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 
 const CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
 /** 본체와 같은 side 유닛. 슬롯 id는 AdSense 콘솔에서 온다. */
-const SLOT = "3412941400";
+const SLOT = "5177925548";
 
 /**
  * 도면 옆 세로 광고. 데스크톱에서만 띄운다 — 좁은 화면에서는 캔버스를 잡아먹고, 확대·이동하다
