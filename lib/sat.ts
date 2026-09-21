@@ -111,13 +111,13 @@ export function satToLines(sat: string): SatResult {
         if (pt) ends.push(nums(pt.tok.filter((s) => !s.startsWith("$")), 0, 3));
       }
       if (ends.length >= 2) lines.push(ends.slice(0, 2).flatMap((p) => applyX(x, p)));
-      else skipped["straight-curve(끝점없음)"] = (skipped["straight-curve(끝점없음)"] ?? 0) + 1;
+      else skipped["straight-curve(no endpoints)"] = (skipped["straight-curve(no endpoints)"] ?? 0) + 1;
     } else if (curve.type === "ellipse-curve") {
       const v = curve.tok.filter((t) => !t.startsWith("$"));
       const center = nums(v, 0, 3), normal = nums(v, 3, 3), major = nums(v, 6, 3);
       const ratio = Number(v[9]);
       if ([...center, ...normal, ...major, ratio].some(Number.isNaN)) {
-        skipped["ellipse-curve(해석실패)"] = (skipped["ellipse-curve(해석실패)"] ?? 0) + 1;
+        skipped["ellipse-curve(unparsed)"] = (skipped["ellipse-curve(unparsed)"] ?? 0) + 1;
       } else {
         lines.push(ellipse(center, normal, major, ratio).flatMap((p) => applyX(x, p)));
       }

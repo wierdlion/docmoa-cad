@@ -5,6 +5,7 @@ import { readCad } from "@/lib/dwg";
 import { fitViewBox, type Box } from "@/lib/fit";
 import { toPdf, toPng } from "@/lib/export";
 import { isEmpty, type Model3 } from "@/lib/three-d";
+import { fill, type Dict, type Locale } from "@/lib/i18n";
 import dynamic from "next/dynamic";
 
 // three.js는 3D를 실제로 볼 때만 받는다.
@@ -12,7 +13,7 @@ const Viewer3d = dynamic(() => import("@/components/viewer3d"), { ssr: false });
 
 
 
-export default function Viewer() {
+export default function Viewer({ locale, t }: { locale: Locale; t: Dict }) {
   const host = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
   const boxRef = useRef<Box | null>(null);
@@ -27,6 +28,11 @@ export default function Viewer() {
   const [layers, setLayers] = useState<string[]>([]);
   const [off, setOff] = useState<Set<string>>(new Set());
 
+  const message = (e: unknown, fallback: keyof Dict["err"]) => {
+    const code = e instanceof Error ? e.message : "";
+    return t.err[code as keyof Dict["err"]] ?? t.err[fallback];
+  };
+
   const apply = (b: Box) => {
     boxRef.current = b;
     svgRef.current?.setAttribute("viewBox", `${b.x} ${b.y} ${b.w} ${b.h}`);
@@ -38,7 +44,7 @@ export default function Viewer() {
       const cad = await readCad(await file.arrayBuffer(), file.name);
       const doc = new DOMParser().parseFromString(cad.svg, "image/svg+xml");
       const svg = doc.documentElement as unknown as SVGSVGElement;
-      if (svg.nodeName !== "svg") throw new Error("도면을 그릴 수 없습니다.");
+      if (svg.nodeName !== "svg") throw new Error("draw");
 
       for (const h of cad.drop) doc.getElementById(h)?.remove();
       for (const [h, layer] of Object.entries(cad.layerOf)) doc.getElementById(h)?.setAttribute("data-layer", layer);
@@ -56,7 +62,7 @@ export default function Viewer() {
       setModel3(cad.model3);
       setReady(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "파일을 열지 못했습니다.");
+      setError(message(e, "open"));
       host.current?.replaceChildren();
       svgRef.current = null;
       setLayers([]);
@@ -127,9 +133,9 @@ export default function Viewer() {
     if (!svg || !box) return;
     setSaving(kind); setError("");
     try {
-      await (kind === "png" ? toPng(svg, box, name) : toPdf(svg, box, name));
+      await (kind === "png" ? toPng(svg, box, name) : toPdf(svg, box, name, locale));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "저장하지 못했습니다.");
+      setError(message(e, "save"));
     } finally {
       setSaving("");
     }
@@ -147,32 +153,32 @@ export default function Viewer() {
     <div className="flex h-dvh flex-col bg-slate-900 text-slate-100">
       <header className="flex flex-wrap items-center gap-3 border-b border-slate-700 px-4 py-3">
         <label className="cursor-pointer rounded bg-indigo-600 px-4 py-2 text-sm font-medium hover:bg-indigo-500">
-          도면 열기
+          {t.open}
           <input type="file" accept=".dwg,.dxf" className="hidden"
             onChange={(e) => { const f = e.target.files?.[0]; if (f) open(f); e.target.value = ""; }} />
         </label>
         {name && <span className="text-sm text-slate-400">{name}</span>}
-        {busy && <span className="text-sm text-amber-400">여는 중…</span>}
+        {busy && <span className="text-sm text-amber-400">{t.opening}</span>}
         {error && <span className="text-sm text-red-400">{error}</span>}
         {ready && (
           <div className="ml-auto flex flex-wrap gap-2">
             {layers.length > 0 && (
               <button onClick={() => setShowLayers((v) => !v)}
-                className="rounded border border-slate-600 px-3 py-1.5 text-sm hover:bg-slate-800 sm:hidden">레이어</button>
+                className="rounded border border-slate-600 px-3 py-1.5 text-sm hover:bg-slate-800 sm:hidden">{t.layers}</button>
             )}
             {model3 && !isEmpty(model3) && (
               <button onClick={() => setIn3d((v) => !v)}
                 className={`rounded px-3 py-1.5 text-sm ${in3d ? "bg-indigo-600 hover:bg-indigo-500" : "border border-slate-600 hover:bg-slate-800"}`}>
-                {in3d ? "2D 도면" : "3D 보기"}</button>
+                {in3d ? t.view2d : t.view3d}</button>
             )}
             <button onClick={() => { const f = svgRef.current && fitViewBox(svgRef.current); if (f) apply(f); }}
-              className="rounded border border-slate-600 px-3 py-1.5 text-sm hover:bg-slate-800">전체 보기</button>
+              className="rounded border border-slate-600 px-3 py-1.5 text-sm hover:bg-slate-800">{t.fit}</button>
             <button onClick={() => download("png")} disabled={!!saving}
               className="rounded border border-slate-600 px-3 py-1.5 text-sm hover:bg-slate-800 disabled:opacity-50">
-              {saving === "png" ? "저장 중…" : "PNG 저장"}</button>
+              {saving === "png" ? t.saving : t.png}</button>
             <button onClick={() => download("pdf")} disabled={!!saving}
               className="rounded bg-emerald-700 px-3 py-1.5 text-sm hover:bg-emerald-600 disabled:opacity-50">
-              {saving === "pdf" ? "만드는 중…" : "PDF 저장"}</button>
+              {saving === "pdf" ? t.making : t.pdf}</button>
           </div>
         )}
       </header>
@@ -180,7 +186,7 @@ export default function Viewer() {
       <div className="flex min-h-0 flex-1">
         {layers.length > 0 && (
           <aside className={`${showLayers ? "block" : "hidden"} w-44 shrink-0 overflow-y-auto border-r border-slate-700 p-3 text-sm sm:block sm:w-52`}>
-            <p className="mb-2 font-medium text-slate-300">레이어</p>
+            <p className="mb-2 font-medium text-slate-300">{t.layers}</p>
             {layers.map((l) => (
               <label key={l} className="flex items-center gap-2 py-1 text-slate-400">
                 <input type="checkbox" checked={!off.has(l)} onChange={() => toggle(l)} />
@@ -197,9 +203,9 @@ export default function Viewer() {
               <Viewer3d model={model3} />
               {(model3.wireSolids > 0 || model3.emptySolids > 0 || Object.keys(model3.skipped).length > 0) && (
                 <p className="absolute bottom-3 left-3 right-3 rounded bg-slate-900/90 px-3 py-2 text-xs text-amber-300">
-                  {model3.wireSolids > 0 && `입체 ${model3.wireSolids}개는 모서리만 표시됩니다(면은 그리지 않음). `}
-                  {model3.emptySolids > 0 && `입체 ${model3.emptySolids}개는 모서리가 없어 표시되지 않았습니다. `}
-                  {Object.keys(model3.skipped).length > 0 && `지원하지 않는 곡선: ${Object.keys(model3.skipped).join(", ")}.`}
+                  {model3.wireSolids > 0 && `${fill(t.wire, { n: model3.wireSolids })} `}
+                  {model3.emptySolids > 0 && `${fill(t.empty, { n: model3.emptySolids })} `}
+                  {Object.keys(model3.skipped).length > 0 && fill(t.skipped, { list: Object.keys(model3.skipped).join(", ") })}
                 </p>
               )}
             </div>
