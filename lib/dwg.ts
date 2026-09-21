@@ -1,4 +1,5 @@
 import { LibreDwg, Dwg_File_Type } from "@mlightcad/libredwg-web";
+import { extract3d, type Model3 } from "./three-d";
 
 const WASM_DIR = "/cad/wasm";
 
@@ -13,6 +14,8 @@ export type Cad = {
   /** 지워야 할 handle (무한선) */
   drop: string[];
   layers: string[];
+  /** 도면에 3차원 형상이 있으면 그 내용. 없으면 null. */
+  model3: Model3 | null;
 };
 
 /** wasmDir은 테스트에서 로컬 경로를 넣기 위한 것. 브라우저에서는 기본값을 쓴다. */
@@ -23,6 +26,8 @@ export async function readCad(buf: ArrayBuffer, filename: string, wasmDir = WASM
   const dwg = lib.dwg_read_data(buf, type);
   if (dwg == null) throw new Error("도면을 읽지 못했습니다. 파일이 손상됐거나 지원하지 않는 형식입니다.");
   const db = lib.convert(dwg);
+  // 3DSOLID의 ACIS 데이터는 WASM 메모리를 가리키는 주소라서, 해제 전에 읽어야 한다.
+  const model3 = extract3d(db.entities ?? [], (ptr) => lib.UTF8ToString(ptr));
   lib.dwg_free(dwg);
 
   sanitize(db);
@@ -34,7 +39,7 @@ export async function readCad(buf: ArrayBuffer, filename: string, wasmDir = WASM
     if (INFINITE.has(e.type) && e.handle) drop.push(e.handle);
   }
   const layers = [...new Set(Object.values(layerOf))].sort();
-  return { svg: repairXml(lib.dwg_to_svg(db)), layerOf, drop, layers };
+  return { svg: repairXml(lib.dwg_to_svg(db)), layerOf, drop, layers, model3 };
 }
 
 /**
