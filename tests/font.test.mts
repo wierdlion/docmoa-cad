@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { pickFont } from "../lib/export.ts";
+import { pickFont } from "@/lib/export";
 
 // 폰트는 화면 언어가 아니라 도면에 쓰인 글자로 고른다. 여기가 틀리면 PDF 글자가 통째로 깨진다.
 test("도면 글자로 폰트를 고른다", () => {
