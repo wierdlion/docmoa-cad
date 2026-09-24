@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { readCad } from "@/lib/dwg";
 import { fitViewBox, type Box } from "@/lib/fit";
 import { toPdf, toPng } from "@/lib/export";
@@ -72,16 +72,24 @@ export default function Viewer({ locale, t }: { locale: Locale; t: Dict }) {
     }
   }, []);
 
-  const zoom = (e: React.WheelEvent) => {
-    const b = boxRef.current, svg = svgRef.current;
-    if (!b || !svg) return;
-    e.preventDefault();
-    const r = svg.getBoundingClientRect();
-    // 커서가 가리키던 도면 좌표가 제자리에 남도록 확대한다.
-    const fx = (e.clientX - r.left) / r.width, fy = (e.clientY - r.top) / r.height;
-    const k = e.deltaY > 0 ? 1.15 : 1 / 1.15;
-    apply({ x: b.x + b.w * fx * (1 - k), y: b.y + b.h * fy * (1 - k), w: b.w * k, h: b.h * k });
-  };
+  useEffect(() => {
+    const target = host.current;
+    if (!target) return;
+    const zoom = (e: WheelEvent) => {
+      const b = boxRef.current, svg = svgRef.current;
+      if (!b || !svg) return;
+      e.preventDefault();
+      const r = svg.getBoundingClientRect();
+      // 커서가 가리키던 도면 좌표가 제자리에 남도록 확대한다.
+      const fx = (e.clientX - r.left) / r.width, fy = (e.clientY - r.top) / r.height;
+      const k = e.deltaY > 0 ? 1.15 : 1 / 1.15;
+      const next = { x: b.x + b.w * fx * (1 - k), y: b.y + b.h * fy * (1 - k), w: b.w * k, h: b.h * k };
+      boxRef.current = next;
+      svg.setAttribute("viewBox", `${next.x} ${next.y} ${next.w} ${next.h}`);
+    };
+    target.addEventListener("wheel", zoom, { passive: false });
+    return () => target.removeEventListener("wheel", zoom);
+  }, []);
 
   // 손가락 하나면 이동, 둘이면 확대. 마우스 드래그도 같은 경로를 탄다.
   const pointers = useRef(new Map<number, { x: number; y: number }>());
@@ -197,7 +205,7 @@ export default function Viewer({ locale, t }: { locale: Locale; t: Dict }) {
           </aside>
         )}
         <div className="relative min-w-0 flex-1">
-          <div ref={host} onWheel={zoom} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
+          <div ref={host} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
             className={`h-full w-full touch-none bg-black [&>svg]:h-full [&>svg]:w-full ${in3d ? "invisible" : ""}`} />
           {in3d && model3 && (
             <div className="absolute inset-0">
