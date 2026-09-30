@@ -168,6 +168,8 @@ export default function Viewer({ locale, t }: { locale: Locale; t: Dict }) {
         </label>
         {name && <span className="text-sm text-slate-400">{name}</span>}
         {busy && <span className="text-sm text-amber-400">{t.opening}</span>}
+        {/* GPL-3 배포 의무: 라이선스와 소스 위치를 화면에 알린다. */}
+        <a href="https://github.com/wierdlion/docmoa-cad" target="_blank" rel="noopener" className="ms-auto text-xs text-slate-500 hover:text-slate-300">GPL-3.0 · Source (LibreDWG)</a>
         {error && <span className="text-sm text-red-400">{error}</span>}
         {ready && (
           <div className="ml-auto flex flex-wrap gap-2">
