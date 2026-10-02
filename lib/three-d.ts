@@ -1,4 +1,4 @@
-import { satToLines } from "./sat";
+import type { SatResult } from "./sat";
 
 /** 도면에서 건져낸 3차원 형상. 선은 이어진 점들, 면은 삼각형 꼭짓점 나열. */
 export type Model3 = {
@@ -24,11 +24,8 @@ type Ent = {
   data?: unknown;
 };
 
-/**
- * `readCad` 안에서, WASM 메모리를 해제하기 전에 불러야 한다.
- * 3DSOLID의 `data`는 문자열이 아니라 WASM 메모리 주소라서, 해제 후에는 읽을 수 없다.
- */
-export function extract3d(entities: Ent[], readString: (ptr: number) => string): Model3 {
+/** satOf는 입체 엔티티의 모서리(ACIS 데이터를 푼 것). `readCad`가 WASM 메모리를 해제하기 전에 읽어 둔다. */
+export function extract3d(entities: Ent[], satOf: (e: Ent) => SatResult | null): Model3 {
   const m: Model3 = { lines: [], tris: [], emptySolids: 0, wireSolids: 0, skipped: {} };
 
   for (const e of entities) {
@@ -45,8 +42,9 @@ export function extract3d(entities: Ent[], readString: (ptr: number) => string):
       for (const v of e.vertices) push(line, v);
       if (line.length >= 6) m.lines.push(line);
     } else if (e.type === "3DSOLID") {
-      if (typeof e.data !== "number" || !e.data) { m.emptySolids++; continue; }
-      const { lines, skipped } = satToLines(readString(e.data));
+      const sat = satOf(e);
+      if (!sat) { m.emptySolids++; continue; }
+      const { lines, skipped } = sat;
       if (lines.length) m.wireSolids++;
       else m.emptySolids++;
       m.lines.push(...lines);

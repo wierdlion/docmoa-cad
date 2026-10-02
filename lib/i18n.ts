@@ -8,15 +8,24 @@ export const isRtl = (l: Locale) => l === "ar";
 export const pageUrl = (l: Locale) => (l === DEFAULT_LOCALE ? "https://docmoa.com/cad" : `https://docmoa.com/${l}/cad`);
 
 /** {n}, {list}는 화면에서 채운다. 함수로 두면 서버에서 클라이언트로 못 넘긴다. */
-export type Dict = {
+type Base = {
   title: string; desc: string;
   open: string; opening: string; layers: string; view3d: string; view2d: string; fit: string;
   png: string; pdf: string; saving: string; making: string; ad: string;
   err: { open: string; read: string; draw: string; save: string; png: string; font: string };
   wire: string; empty: string; skipped: string;
 };
+export type Dict = Base & More;
 
-const en: Dict = {
+/** 2026-10 뷰어 기능 추가분. 본문 사전과 따로 두고 getDict에서 합친다. */
+type More = {
+  search: string; measure: string; measureHint: string; dist: string; area: string;
+  allOn: string; allOff: string; filter: string; bg: string; drop: string; zoomIn: string; zoomOut: string;
+  options: string; paper: string; color: string; size: string;
+  type: string; layer: string; block: string; length: string; notDrawn: string;
+};
+
+const en: Base = {
   title: "DWG viewer · open CAD drawings | DocMoa",
   desc: "Open DWG and DXF drawings in your browser — no AutoCAD. No login, no size limit, and the file never leaves your device.",
   open: "Open drawing", opening: "Opening…", layers: "Layers", view3d: "3D view", view2d: "2D drawing", fit: "Fit to screen",
@@ -35,7 +44,7 @@ const en: Dict = {
   skipped: "Unsupported curves: {list}.",
 };
 
-const ko: Dict = {
+const ko: Base = {
   title: "DWG 뷰어 · 도면 보기 | DocMoa",
   desc: "AutoCAD 없이 브라우저에서 DWG·DXF 도면을 엽니다. 로그인·용량 제한 없음, 파일은 서버로 전송되지 않습니다.",
   open: "도면 열기", opening: "여는 중…", layers: "레이어", view3d: "3D 보기", view2d: "2D 도면", fit: "전체 보기",
@@ -54,7 +63,7 @@ const ko: Dict = {
   skipped: "지원하지 않는 곡선: {list}.",
 };
 
-const ja: Dict = {
+const ja: Base = {
   title: "DWGビューア · 図面を開く | DocMoa",
   desc: "AutoCADなしでブラウザーからDWG・DXF図面を開きます。ログイン不要、容量制限なし、ファイルは端末の外に出ません。",
   open: "図面を開く", opening: "読み込み中…", layers: "レイヤー", view3d: "3D表示", view2d: "2D図面", fit: "全体表示",
@@ -73,7 +82,7 @@ const ja: Dict = {
   skipped: "未対応の曲線: {list}。",
 };
 
-const zh: Dict = {
+const zh: Base = {
   title: "DWG 查看器 · 打开图纸 | DocMoa",
   desc: "无需 AutoCAD，在浏览器中打开 DWG、DXF 图纸。无需登录、没有大小限制，文件不会离开你的设备。",
   open: "打开图纸", opening: "正在打开…", layers: "图层", view3d: "三维视图", view2d: "二维图纸", fit: "适应窗口",
@@ -92,7 +101,7 @@ const zh: Dict = {
   skipped: "不支持的曲线：{list}。",
 };
 
-const zhTW: Dict = {
+const zhTW: Base = {
   title: "DWG 檢視器 · 開啟圖面 | DocMoa",
   desc: "不需要 AutoCAD，直接在瀏覽器開啟 DWG、DXF 圖面。免登入、無容量限制，檔案不會離開你的裝置。",
   open: "開啟圖面", opening: "開啟中…", layers: "圖層", view3d: "3D 檢視", view2d: "2D 圖面", fit: "顯示全部",
@@ -111,7 +120,7 @@ const zhTW: Dict = {
   skipped: "不支援的曲線：{list}。",
 };
 
-const es: Dict = {
+const es: Base = {
   title: "Visor DWG · abrir planos | DocMoa",
   desc: "Abre planos DWG y DXF en el navegador, sin AutoCAD. Sin registro ni límite de tamaño, y el archivo nunca sale de tu dispositivo.",
   open: "Abrir plano", opening: "Abriendo…", layers: "Capas", view3d: "Vista 3D", view2d: "Plano 2D", fit: "Ajustar a pantalla",
@@ -130,7 +139,7 @@ const es: Dict = {
   skipped: "Curvas no compatibles: {list}.",
 };
 
-const pt: Dict = {
+const pt: Base = {
   title: "Visualizador DWG · abrir plantas | DocMoa",
   desc: "Abra desenhos DWG e DXF no navegador, sem AutoCAD. Sem login nem limite de tamanho, e o arquivo não sai do seu dispositivo.",
   open: "Abrir desenho", opening: "Abrindo…", layers: "Camadas", view3d: "Vista 3D", view2d: "Desenho 2D", fit: "Ajustar à tela",
@@ -149,7 +158,7 @@ const pt: Dict = {
   skipped: "Curvas não suportadas: {list}.",
 };
 
-const fr: Dict = {
+const fr: Base = {
   title: "Visionneuse DWG · ouvrir un plan | DocMoa",
   desc: "Ouvrez vos plans DWG et DXF dans le navigateur, sans AutoCAD. Sans compte ni limite de taille, et le fichier ne quitte pas votre appareil.",
   open: "Ouvrir un plan", opening: "Ouverture…", layers: "Calques", view3d: "Vue 3D", view2d: "Plan 2D", fit: "Ajuster à l'écran",
@@ -168,7 +177,7 @@ const fr: Dict = {
   skipped: "Courbes non prises en charge : {list}.",
 };
 
-const de: Dict = {
+const de: Base = {
   title: "DWG-Betrachter · Zeichnung öffnen | DocMoa",
   desc: "DWG- und DXF-Zeichnungen im Browser öffnen, ganz ohne AutoCAD. Ohne Anmeldung, ohne Größenlimit, und die Datei verlässt Ihr Gerät nicht.",
   open: "Zeichnung öffnen", opening: "Wird geöffnet…", layers: "Layer", view3d: "3D-Ansicht", view2d: "2D-Zeichnung", fit: "Alles anzeigen",
@@ -187,7 +196,7 @@ const de: Dict = {
   skipped: "Nicht unterstützte Kurven: {list}.",
 };
 
-const it: Dict = {
+const it: Base = {
   title: "Visualizzatore DWG · aprire disegni | DocMoa",
   desc: "Apri disegni DWG e DXF nel browser, senza AutoCAD. Senza registrazione né limiti di dimensione, e il file non lascia il tuo dispositivo.",
   open: "Apri disegno", opening: "Apertura…", layers: "Livelli", view3d: "Vista 3D", view2d: "Disegno 2D", fit: "Adatta allo schermo",
@@ -206,7 +215,7 @@ const it: Dict = {
   skipped: "Curve non supportate: {list}.",
 };
 
-const ru: Dict = {
+const ru: Base = {
   title: "Просмотр DWG · открыть чертёж | DocMoa",
   desc: "Открывайте чертежи DWG и DXF в браузере без AutoCAD. Без регистрации и ограничений по размеру, файл не покидает ваше устройство.",
   open: "Открыть чертёж", opening: "Открываем…", layers: "Слои", view3d: "3D-вид", view2d: "2D-чертёж", fit: "Вписать в экран",
@@ -225,7 +234,7 @@ const ru: Dict = {
   skipped: "Неподдерживаемые кривые: {list}.",
 };
 
-const id: Dict = {
+const id: Base = {
   title: "Penampil DWG · buka gambar teknik | DocMoa",
   desc: "Buka gambar DWG dan DXF langsung di browser, tanpa AutoCAD. Tanpa login, tanpa batas ukuran, dan berkas tidak meninggalkan perangkat Anda.",
   open: "Buka gambar", opening: "Membuka…", layers: "Layer", view3d: "Tampilan 3D", view2d: "Gambar 2D", fit: "Paskan ke layar",
@@ -244,7 +253,7 @@ const id: Dict = {
   skipped: "Kurva yang tidak didukung: {list}.",
 };
 
-const vi: Dict = {
+const vi: Base = {
   title: "Trình xem DWG · mở bản vẽ | DocMoa",
   desc: "Mở bản vẽ DWG và DXF ngay trên trình duyệt, không cần AutoCAD. Không đăng nhập, không giới hạn dung lượng, tệp không rời khỏi thiết bị của bạn.",
   open: "Mở bản vẽ", opening: "Đang mở…", layers: "Lớp", view3d: "Xem 3D", view2d: "Bản vẽ 2D", fit: "Vừa màn hình",
@@ -263,7 +272,7 @@ const vi: Dict = {
   skipped: "Đường cong không hỗ trợ: {list}.",
 };
 
-const th: Dict = {
+const th: Base = {
   title: "โปรแกรมดู DWG · เปิดแบบแปลน | DocMoa",
   desc: "เปิดไฟล์แบบ DWG และ DXF ในเบราว์เซอร์ได้เลย ไม่ต้องมี AutoCAD ไม่ต้องล็อกอิน ไม่จำกัดขนาด และไฟล์ไม่ถูกส่งออกจากเครื่องของคุณ",
   open: "เปิดแบบแปลน", opening: "กำลังเปิด…", layers: "เลเยอร์", view3d: "มุมมอง 3 มิติ", view2d: "แบบ 2 มิติ", fit: "พอดีหน้าจอ",
@@ -282,7 +291,7 @@ const th: Dict = {
   skipped: "เส้นโค้งที่ไม่รองรับ: {list}",
 };
 
-const tr: Dict = {
+const tr: Base = {
   title: "DWG görüntüleyici · çizim açma | DocMoa",
   desc: "DWG ve DXF çizimlerini AutoCAD olmadan tarayıcıda açın. Üyelik yok, boyut sınırı yok ve dosya cihazınızdan çıkmaz.",
   open: "Çizim aç", opening: "Açılıyor…", layers: "Katmanlar", view3d: "3B görünüm", view2d: "2B çizim", fit: "Ekrana sığdır",
@@ -301,7 +310,7 @@ const tr: Dict = {
   skipped: "Desteklenmeyen eğriler: {list}.",
 };
 
-const ar: Dict = {
+const ar: Base = {
   title: "عارض DWG · فتح المخططات | DocMoa",
   desc: "افتح مخططات DWG وDXF في المتصفح دون AutoCAD. بلا تسجيل دخول ولا حد للحجم، والملف لا يغادر جهازك.",
   open: "فتح مخطط", opening: "جارٍ الفتح…", layers: "الطبقات", view3d: "عرض ثلاثي الأبعاد", view2d: "مخطط ثنائي الأبعاد", fit: "ملء الشاشة",
@@ -320,7 +329,7 @@ const ar: Dict = {
   skipped: "منحنيات غير مدعومة: {list}.",
 };
 
-const hi: Dict = {
+const hi: Base = {
   title: "DWG व्यूअर · ड्रॉइंग खोलें | DocMoa",
   desc: "AutoCAD के बिना ब्राउज़र में ही DWG और DXF ड्रॉइंग खोलें। न लॉगिन, न आकार की सीमा, और फ़ाइल आपके डिवाइस से बाहर नहीं जाती।",
   open: "ड्रॉइंग खोलें", opening: "खोला जा रहा है…", layers: "लेयर", view3d: "3D दृश्य", view2d: "2D ड्रॉइंग", fit: "स्क्रीन में फ़िट करें",
@@ -339,7 +348,7 @@ const hi: Dict = {
   skipped: "असमर्थित वक्र: {list}।",
 };
 
-const pl: Dict = {
+const pl: Base = {
   title: "Przeglądarka DWG · otwieranie rysunków | DocMoa",
   desc: "Otwieraj rysunki DWG i DXF w przeglądarce, bez AutoCAD-a. Bez logowania i limitu rozmiaru, a plik nie opuszcza Twojego urządzenia.",
   open: "Otwórz rysunek", opening: "Otwieranie…", layers: "Warstwy", view3d: "Widok 3D", view2d: "Rysunek 2D", fit: "Dopasuj do ekranu",
@@ -358,7 +367,7 @@ const pl: Dict = {
   skipped: "Nieobsługiwane krzywe: {list}.",
 };
 
-const nl: Dict = {
+const nl: Base = {
   title: "DWG-viewer · tekeningen openen | DocMoa",
   desc: "Open DWG- en DXF-tekeningen in de browser, zonder AutoCAD. Geen account, geen groottelimiet, en het bestand blijft op uw apparaat.",
   open: "Tekening openen", opening: "Bezig met openen…", layers: "Lagen", view3d: "3D-weergave", view2d: "2D-tekening", fit: "Passend maken",
@@ -377,7 +386,7 @@ const nl: Dict = {
   skipped: "Niet-ondersteunde krommen: {list}.",
 };
 
-const ms: Dict = {
+const ms: Base = {
   title: "Pemapar DWG · buka lukisan | DocMoa",
   desc: "Buka lukisan DWG dan DXF terus dalam pelayar, tanpa AutoCAD. Tiada log masuk, tiada had saiz, dan fail tidak meninggalkan peranti anda.",
   open: "Buka lukisan", opening: "Sedang dibuka…", layers: "Lapisan", view3d: "Paparan 3D", view2d: "Lukisan 2D", fit: "Muat skrin",
@@ -396,7 +405,30 @@ const ms: Dict = {
   skipped: "Lengkung yang tidak disokong: {list}.",
 };
 
-const DICTS: Record<Locale, Dict> = { en, ko, ja, zh, "zh-tw": zhTW, es, pt, fr, de, it, ru, id, vi, th, tr, ar, hi, pl, nl, ms };
-export const getDict = (l: Locale): Dict => DICTS[l];
+const MORE: Record<Locale, More> = {
+  en: { search: "Find text", measure: "Measure", measureHint: "Click points to measure. Esc clears.", dist: "Length", area: "Area", allOn: "All on", allOff: "All off", filter: "Filter layers", bg: "Background", drop: "Drop a DWG or DXF file here", zoomIn: "Zoom in", zoomOut: "Zoom out", options: "Export options", paper: "Paper", color: "Keep colors", size: "PNG size", type: "Type", layer: "Layer", block: "Block", length: "Length", notDrawn: "Not drawn: {list}" },
+  ko: { search: "글자 찾기", measure: "측정", measureHint: "점을 찍어 재세요. Esc로 지웁니다.", dist: "길이", area: "면적", allOn: "모두 켜기", allOff: "모두 끄기", filter: "레이어 검색", bg: "배경", drop: "DWG·DXF 파일을 여기에 놓으세요", zoomIn: "확대", zoomOut: "축소", options: "저장 옵션", paper: "용지", color: "색 유지", size: "PNG 크기", type: "종류", layer: "레이어", block: "블록", length: "길이", notDrawn: "그리지 못함: {list}" },
+  ja: { search: "文字を検索", measure: "計測", measureHint: "点をクリックして計測します。Escで消去。", dist: "長さ", area: "面積", allOn: "すべて表示", allOff: "すべて非表示", filter: "レイヤーを絞り込む", bg: "背景", drop: "DWG・DXFファイルをここにドロップ", zoomIn: "拡大", zoomOut: "縮小", options: "保存オプション", paper: "用紙", color: "色を保持", size: "PNGサイズ", type: "種類", layer: "レイヤー", block: "ブロック", length: "長さ", notDrawn: "未描画: {list}" },
+  zh: { search: "查找文字", measure: "测量", measureHint: "点击各点进行测量，Esc 清除。", dist: "长度", area: "面积", allOn: "全部显示", allOff: "全部隐藏", filter: "筛选图层", bg: "背景", drop: "将 DWG 或 DXF 文件拖到此处", zoomIn: "放大", zoomOut: "缩小", options: "导出选项", paper: "纸张", color: "保留颜色", size: "PNG 尺寸", type: "类型", layer: "图层", block: "块", length: "长度", notDrawn: "未绘制: {list}" },
+  "zh-tw": { search: "尋找文字", measure: "測量", measureHint: "點選各點進行測量，Esc 清除。", dist: "長度", area: "面積", allOn: "全部顯示", allOff: "全部隱藏", filter: "篩選圖層", bg: "背景", drop: "將 DWG 或 DXF 檔案拖到此處", zoomIn: "放大", zoomOut: "縮小", options: "匯出選項", paper: "紙張", color: "保留顏色", size: "PNG 尺寸", type: "類型", layer: "圖層", block: "圖塊", length: "長度", notDrawn: "未繪製: {list}" },
+  es: { search: "Buscar texto", measure: "Medir", measureHint: "Haz clic en puntos para medir. Esc borra.", dist: "Longitud", area: "Área", allOn: "Mostrar todo", allOff: "Ocultar todo", filter: "Filtrar capas", bg: "Fondo", drop: "Suelta aquí un archivo DWG o DXF", zoomIn: "Acercar", zoomOut: "Alejar", options: "Opciones de exportación", paper: "Papel", color: "Mantener colores", size: "Tamaño PNG", type: "Tipo", layer: "Capa", block: "Bloque", length: "Longitud", notDrawn: "No dibujado: {list}" },
+  pt: { search: "Procurar texto", measure: "Medir", measureHint: "Clique em pontos para medir. Esc limpa.", dist: "Comprimento", area: "Área", allOn: "Mostrar tudo", allOff: "Ocultar tudo", filter: "Filtrar camadas", bg: "Fundo", drop: "Solte aqui um arquivo DWG ou DXF", zoomIn: "Ampliar", zoomOut: "Reduzir", options: "Opções de exportação", paper: "Papel", color: "Manter cores", size: "Tamanho PNG", type: "Tipo", layer: "Camada", block: "Bloco", length: "Comprimento", notDrawn: "Não desenhado: {list}" },
+  fr: { search: "Rechercher du texte", measure: "Mesurer", measureHint: "Cliquez sur des points pour mesurer. Échap efface.", dist: "Longueur", area: "Surface", allOn: "Tout afficher", allOff: "Tout masquer", filter: "Filtrer les calques", bg: "Fond", drop: "Déposez un fichier DWG ou DXF ici", zoomIn: "Zoom avant", zoomOut: "Zoom arrière", options: "Options d’export", paper: "Papier", color: "Garder les couleurs", size: "Taille PNG", type: "Type", layer: "Calque", block: "Bloc", length: "Longueur", notDrawn: "Non dessiné : {list}" },
+  de: { search: "Text suchen", measure: "Messen", measureHint: "Punkte anklicken zum Messen. Esc löscht.", dist: "Länge", area: "Fläche", allOn: "Alle ein", allOff: "Alle aus", filter: "Layer filtern", bg: "Hintergrund", drop: "DWG- oder DXF-Datei hier ablegen", zoomIn: "Vergrößern", zoomOut: "Verkleinern", options: "Exportoptionen", paper: "Papier", color: "Farben behalten", size: "PNG-Größe", type: "Typ", layer: "Layer", block: "Block", length: "Länge", notDrawn: "Nicht gezeichnet: {list}" },
+  it: { search: "Cerca testo", measure: "Misura", measureHint: "Clicca i punti per misurare. Esc cancella.", dist: "Lunghezza", area: "Area", allOn: "Mostra tutti", allOff: "Nascondi tutti", filter: "Filtra layer", bg: "Sfondo", drop: "Trascina qui un file DWG o DXF", zoomIn: "Ingrandisci", zoomOut: "Riduci", options: "Opzioni di esportazione", paper: "Carta", color: "Mantieni colori", size: "Dimensione PNG", type: "Tipo", layer: "Layer", block: "Blocco", length: "Lunghezza", notDrawn: "Non disegnato: {list}" },
+  ru: { search: "Найти текст", measure: "Измерить", measureHint: "Щёлкайте точки для измерения. Esc очищает.", dist: "Длина", area: "Площадь", allOn: "Показать все", allOff: "Скрыть все", filter: "Фильтр слоёв", bg: "Фон", drop: "Перетащите сюда файл DWG или DXF", zoomIn: "Приблизить", zoomOut: "Отдалить", options: "Параметры экспорта", paper: "Бумага", color: "Сохранить цвета", size: "Размер PNG", type: "Тип", layer: "Слой", block: "Блок", length: "Длина", notDrawn: "Не нарисовано: {list}" },
+  id: { search: "Cari teks", measure: "Ukur", measureHint: "Klik titik-titik untuk mengukur. Esc menghapus.", dist: "Panjang", area: "Luas", allOn: "Tampilkan semua", allOff: "Sembunyikan semua", filter: "Saring layer", bg: "Latar", drop: "Letakkan file DWG atau DXF di sini", zoomIn: "Perbesar", zoomOut: "Perkecil", options: "Opsi ekspor", paper: "Kertas", color: "Pertahankan warna", size: "Ukuran PNG", type: "Jenis", layer: "Layer", block: "Blok", length: "Panjang", notDrawn: "Tidak digambar: {list}" },
+  vi: { search: "Tìm chữ", measure: "Đo", measureHint: "Nhấp các điểm để đo. Esc để xóa.", dist: "Chiều dài", area: "Diện tích", allOn: "Bật tất cả", allOff: "Tắt tất cả", filter: "Lọc lớp", bg: "Nền", drop: "Thả tệp DWG hoặc DXF vào đây", zoomIn: "Phóng to", zoomOut: "Thu nhỏ", options: "Tùy chọn xuất", paper: "Khổ giấy", color: "Giữ màu", size: "Kích thước PNG", type: "Loại", layer: "Lớp", block: "Khối", length: "Chiều dài", notDrawn: "Không vẽ được: {list}" },
+  th: { search: "ค้นหาข้อความ", measure: "วัด", measureHint: "คลิกจุดเพื่อวัด กด Esc เพื่อล้าง", dist: "ความยาว", area: "พื้นที่", allOn: "เปิดทั้งหมด", allOff: "ปิดทั้งหมด", filter: "กรองเลเยอร์", bg: "พื้นหลัง", drop: "วางไฟล์ DWG หรือ DXF ที่นี่", zoomIn: "ขยาย", zoomOut: "ย่อ", options: "ตัวเลือกการส่งออก", paper: "กระดาษ", color: "คงสี", size: "ขนาด PNG", type: "ชนิด", layer: "เลเยอร์", block: "บล็อก", length: "ความยาว", notDrawn: "ไม่ได้วาด: {list}" },
+  tr: { search: "Metin ara", measure: "Ölç", measureHint: "Ölçmek için noktalara tıklayın. Esc temizler.", dist: "Uzunluk", area: "Alan", allOn: "Tümünü aç", allOff: "Tümünü kapat", filter: "Katmanları süz", bg: "Arka plan", drop: "DWG veya DXF dosyasını buraya bırakın", zoomIn: "Yakınlaştır", zoomOut: "Uzaklaştır", options: "Dışa aktarma seçenekleri", paper: "Kâğıt", color: "Renkleri koru", size: "PNG boyutu", type: "Tür", layer: "Katman", block: "Blok", length: "Uzunluk", notDrawn: "Çizilemedi: {list}" },
+  ar: { search: "بحث عن نص", measure: "قياس", measureHint: "انقر على النقاط للقياس. Esc للمسح.", dist: "الطول", area: "المساحة", allOn: "إظهار الكل", allOff: "إخفاء الكل", filter: "تصفية الطبقات", bg: "الخلفية", drop: "أفلت ملف DWG أو DXF هنا", zoomIn: "تكبير", zoomOut: "تصغير", options: "خيارات التصدير", paper: "الورق", color: "الاحتفاظ بالألوان", size: "حجم PNG", type: "النوع", layer: "الطبقة", block: "الكتلة", length: "الطول", notDrawn: "لم يُرسم: {list}" },
+  hi: { search: "टेक्स्ट खोजें", measure: "मापें", measureHint: "मापने के लिए बिंदुओं पर क्लिक करें। Esc से मिटाएँ।", dist: "लंबाई", area: "क्षेत्रफल", allOn: "सभी चालू", allOff: "सभी बंद", filter: "लेयर छानें", bg: "पृष्ठभूमि", drop: "DWG या DXF फ़ाइल यहाँ छोड़ें", zoomIn: "ज़ूम इन", zoomOut: "ज़ूम आउट", options: "निर्यात विकल्प", paper: "कागज़", color: "रंग रखें", size: "PNG आकार", type: "प्रकार", layer: "लेयर", block: "ब्लॉक", length: "लंबाई", notDrawn: "नहीं बनाया गया: {list}" },
+  pl: { search: "Znajdź tekst", measure: "Mierz", measureHint: "Klikaj punkty, aby mierzyć. Esc czyści.", dist: "Długość", area: "Pole", allOn: "Włącz wszystkie", allOff: "Wyłącz wszystkie", filter: "Filtruj warstwy", bg: "Tło", drop: "Upuść tutaj plik DWG lub DXF", zoomIn: "Powiększ", zoomOut: "Pomniejsz", options: "Opcje eksportu", paper: "Papier", color: "Zachowaj kolory", size: "Rozmiar PNG", type: "Typ", layer: "Warstwa", block: "Blok", length: "Długość", notDrawn: "Nie narysowano: {list}" },
+  nl: { search: "Tekst zoeken", measure: "Meten", measureHint: "Klik punten om te meten. Esc wist.", dist: "Lengte", area: "Oppervlakte", allOn: "Alles aan", allOff: "Alles uit", filter: "Lagen filteren", bg: "Achtergrond", drop: "Sleep hier een DWG- of DXF-bestand naartoe", zoomIn: "Inzoomen", zoomOut: "Uitzoomen", options: "Exportopties", paper: "Papier", color: "Kleuren behouden", size: "PNG-grootte", type: "Type", layer: "Laag", block: "Blok", length: "Lengte", notDrawn: "Niet getekend: {list}" },
+  ms: { search: "Cari teks", measure: "Ukur", measureHint: "Klik titik untuk mengukur. Esc memadam.", dist: "Panjang", area: "Luas", allOn: "Tunjuk semua", allOff: "Sembunyi semua", filter: "Tapis lapisan", bg: "Latar", drop: "Lepaskan fail DWG atau DXF di sini", zoomIn: "Zum masuk", zoomOut: "Zum keluar", options: "Pilihan eksport", paper: "Kertas", color: "Kekalkan warna", size: "Saiz PNG", type: "Jenis", layer: "Lapisan", block: "Blok", length: "Panjang", notDrawn: "Tidak dilukis: {list}" },
+};
+
+const DICTS: Record<Locale, Base> = { en, ko, ja, zh, "zh-tw": zhTW, es, pt, fr, de, it, ru, id, vi, th, tr, ar, hi, pl, nl, ms };
+export const getDict = (l: Locale): Dict => ({ ...DICTS[l], ...MORE[l] });
 /** "입체 {n}개…" 같은 자리를 채운다. */
 export const fill = (s: string, v: Record<string, string | number>) => s.replace(/\{(\w+)\}/g, (_, k) => String(v[k] ?? ""));
