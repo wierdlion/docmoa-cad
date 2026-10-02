@@ -19,3 +19,11 @@ test("입체에서 모서리를 뽑아 3D 선으로 만든다", () => {
   assert.ok(Math.abs(Math.min(...xs) - 5) < 0.01 && Math.abs(Math.max(...xs) - 15) < 0.01, `x 범위가 5~15여야: ${Math.min(...xs)}~${Math.max(...xs)}`);
   assert.ok(Math.max(...zs) - Math.min(...zs) < 0.01, "밑면이므로 z가 일정해야");
 });
+
+// R14 파일의 ACIS 데이터는 헤더가 한 줄뿐이다. 상자 입체: 모서리 18개가 전부 직선으로 나와야 한다.
+test("헤더가 한 줄인 R14 ACIS 데이터도 읽는다", () => {
+  const { lines, skipped } = satToLines(readFileSync(new URL("./fixtures/box_r14.sat", import.meta.url), "utf8"));
+  assert.equal(lines.length, 18);
+  assert.deepEqual(skipped, {});
+  for (const l of lines) assert.equal(l.length, 6);
+});

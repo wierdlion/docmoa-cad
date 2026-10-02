@@ -17,9 +17,14 @@ export type SatResult = {
 
 type Rec = { type: string; tok: string[] };
 
-/** SAT 본문은 `#`로 끝나는 레코드의 나열이고, 참조 `$n`은 레코드의 등장 순서를 가리킨다. */
+/**
+ * SAT 본문은 `#`로 끝나는 레코드의 나열이고, 참조 `$n`은 레코드의 등장 순서를 가리킨다.
+ * 헤더는 보통 3줄(버전·제품·단위)이지만 R14 파일은 1줄뿐이다. 글자로 시작하는 첫 줄부터가 레코드다.
+ */
 function records(sat: string): Rec[] {
-  const body = sat.split("\n").slice(3).join("\n"); // 헤더 3줄
+  const lines = sat.split("\n");
+  const start = lines.findIndex((l) => /^[A-Za-z]/.test(l.trim()));
+  const body = start < 0 ? "" : lines.slice(start).join("\n");
   return body
     .split("#")
     .map((r) => r.trim())
