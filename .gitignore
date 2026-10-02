@@ -4,3 +4,6 @@ public/wasm/
 next-env.d.ts
 tsconfig.tsbuildinfo
 .vercel
+
+# 검증 스크립트·스크린샷. 저장소에도, 배포 업로드에도 들어가면 안 된다.
+.shots/
