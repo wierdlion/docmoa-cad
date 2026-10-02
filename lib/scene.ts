@@ -37,6 +37,8 @@ export type Scene = {
   layers: string[];
   /** 본체를 감싸는 뷰 상자. 비어 있는 도면이면 null. */
   fit: Box | null;
+  /** 모델 공간 엔티티(SVG <g id=handle>)마다 minx, miny, maxx, maxy. PDF 저장 때 화면 밖 엔티티를 빼는 데 쓴다. */
+  handleBounds: Record<string, [number, number, number, number]>;
   skipped: Record<string, number>;
 };
 
@@ -100,8 +102,8 @@ type Txt = { m: Mat; x: number; y: number; size: number; anchor: 0 | 1 | 2; str:
 type Use = { href: string; m: Mat; stroke: number; fill: number };
 type Proto = { polys: Poly[]; texts: Txt[]; uses: Use[] };
 
-/** 열려 있는 요소 하나. target이 있으면 블록 정의를 수집하는 중이다. */
-type Frame = { m: Mat; stroke: number; fill: number; layer: number; target: Proto | null };
+/** 열려 있는 요소 하나. target이 있으면 블록 정의를 수집하는 중이다. handle은 감싸는 모델 공간 엔티티. */
+type Frame = { m: Mat; stroke: number; fill: number; layer: number; target: Proto | null; handle: string | null };
 
 export function parseScene(svg: string, layerOf: Record<string, string>, drop: Iterable<string> = []): Scene {
   const skipped: Record<string, number> = {};
@@ -130,8 +132,15 @@ export function parseScene(svg: string, layerOf: Record<string, string>, drop: I
   const items: number[] = [];
   const bounds: number[] = [];
   const texts: TextItem[] = [];
+  const handleBounds: Record<string, [number, number, number, number]> = {};
+  const grow = (handle: string | null, minx: number, miny: number, maxx: number, maxy: number) => {
+    if (!handle) return;
+    const b = handleBounds[handle];
+    if (!b) handleBounds[handle] = [minx, miny, maxx, maxy];
+    else { if (minx < b[0]) b[0] = minx; if (miny < b[1]) b[1] = miny; if (maxx > b[2]) b[2] = maxx; if (maxy > b[3]) b[3] = maxy; }
+  };
 
-  const emitPoly = (p: Poly, m: Mat, stroke: number, fill: number, lay: number) => {
+  const emitPoly = (p: Poly, m: Mat, stroke: number, fill: number, lay: number, handle: string | null) => {
     const s = p.stroke === UNSET ? stroke : p.stroke, f = p.fill === UNSET ? fill : p.fill;
     if ((s < 0 && f < 0) || p.pts.length < 4) return;
     const start = verts.length / 2;
@@ -144,31 +153,37 @@ export function parseScene(svg: string, layerOf: Record<string, string>, drop: I
     }
     items.push(start, p.pts.length / 2, Math.max(s, NONE), Math.max(f, NONE), lay, p.closed ? F_CLOSED : 0);
     bounds.push(minx, miny, maxx, maxy);
+    grow(handle, minx, miny, maxx, maxy);
   };
-  const emitText = (t: Txt, m: Mat, stroke: number, fill: number, lay: number) => {
+  const emitText = (t: Txt, m: Mat, stroke: number, fill: number, lay: number, handle: string | null) => {
     const f = t.fill === UNSET ? fill : t.fill, s = t.stroke === UNSET ? stroke : t.stroke;
     const c = f >= 0 ? f : s;
     if (c < 0 || !t.str) return;
-    texts.push({ m: mul(m, t.m), x: t.x, y: t.y, size: t.size, anchor: t.anchor, str: t.str, color: c, layer: lay });
+    const tm = mul(m, t.m);
+    texts.push({ m: tm, x: t.x, y: t.y, size: t.size, anchor: t.anchor, str: t.str, color: c, layer: lay });
+    // 글자 상자는 기준점 주위로 글자 높이 × 글자 수만큼 잡는다. 정확하진 않지만 PDF 자르기에는 충분하다.
+    const px = tm[0] * t.x + tm[2] * t.y + tm[4], py = tm[1] * t.x + tm[3] * t.y + tm[5];
+    const r = t.size * Math.hypot(tm[0], tm[1]) * (t.str.length + 1);
+    grow(handle, px - r, py - r, px + r, py + r);
   };
 
   const blocks = new Map<string, Proto>();
-  const instantiate = (name: string, m: Mat, stroke: number, fill: number, lay: number, depth: number) => {
+  const instantiate = (name: string, m: Mat, stroke: number, fill: number, lay: number, handle: string | null, depth: number) => {
     const b = blocks.get(name);
     if (!b) { count(skipped, "use:missing"); return; }
     if (depth > 8) { count(skipped, "use:deep"); return; }
-    for (const p of b.polys) emitPoly(p, m, stroke, fill, lay);
-    for (const t of b.texts) emitText(t, m, stroke, fill, lay);
-    for (const u of b.uses) instantiate(u.href, mul(m, u.m), u.stroke === UNSET ? stroke : u.stroke, u.fill === UNSET ? fill : u.fill, lay, depth + 1);
+    for (const p of b.polys) emitPoly(p, m, stroke, fill, lay, handle);
+    for (const t of b.texts) emitText(t, m, stroke, fill, lay, handle);
+    for (const u of b.uses) instantiate(u.href, mul(m, u.m), u.stroke === UNSET ? stroke : u.stroke, u.fill === UNSET ? fill : u.fill, lay, handle, depth + 1);
   };
 
-  const stack: Frame[] = [{ m: IDENTITY, stroke: UNSET, fill: UNSET, layer: layer("0"), target: null }];
+  const stack: Frame[] = [{ m: IDENTITY, stroke: UNSET, fill: UNSET, layer: layer("0"), target: null, handle: null }];
   const top = () => stack[stack.length - 1];
   let inDefs = false, skipSvg = 0, sawRoot = false;
 
   const addPoly = (f: Frame, pts: number[], closed: boolean) => {
     if (f.target) f.target.polys.push({ pts: apply(f.m, pts), stroke: f.stroke, fill: f.fill, closed });
-    else emitPoly({ pts, stroke: f.stroke, fill: f.fill, closed }, f.m, f.stroke, f.fill, f.layer);
+    else emitPoly({ pts, stroke: f.stroke, fill: f.fill, closed }, f.m, f.stroke, f.fill, f.layer, f.handle);
   };
 
   const TAG = /<(\/?)([A-Za-z][\w:-]*)((?:\s+[\w:-]+="[^"]*")*)\s*(\/?)>/g;
@@ -201,16 +216,16 @@ export function parseScene(svg: string, layerOf: Record<string, string>, drop: I
     if (tag === "g" && inDefs && !parent.target && attrs.id) {
       const target: Proto = { polys: [], texts: [], uses: [] };
       blocks.set(attrs.id, target);
-      stack.push({ m: local, stroke: color(attrs.stroke, UNSET), fill: color(attrs.fill, UNSET), layer: parent.layer, target });
+      stack.push({ m: local, stroke: color(attrs.stroke, UNSET), fill: color(attrs.fill, UNSET), layer: parent.layer, target, handle: null });
       continue;
     }
 
-    const frame: Frame = { m: mul(parent.m, local), stroke: color(attrs.stroke, parent.stroke), fill: color(attrs.fill, parent.fill), layer: parent.layer, target: parent.target };
+    const frame: Frame = { m: mul(parent.m, local), stroke: color(attrs.stroke, parent.stroke), fill: color(attrs.fill, parent.fill), layer: parent.layer, target: parent.target, handle: parent.handle };
     if (tag === "g") {
       if (attrs.id && !parent.target) {
         if (dropped.has(attrs.id)) { frame.stroke = NONE; frame.fill = NONE; }
         const name = layerOf[attrs.id];
-        if (name !== undefined) frame.layer = layer(name);
+        if (name !== undefined) { frame.layer = layer(name); frame.handle = attrs.id; }
       }
       stack.push(frame);
       continue;
@@ -228,14 +243,14 @@ export function parseScene(svg: string, layerOf: Record<string, string>, drop: I
     } else if (tag === "use") {
       const href = (attrs.href ?? attrs["xlink:href"] ?? "").replace(/^#/, "");
       if (parent.target) parent.target.uses.push({ href, m: mul(parent.m, local), stroke: color(attrs.stroke, UNSET), fill: color(attrs.fill, UNSET) });
-      else instantiate(href, frame.m, frame.stroke, frame.fill, frame.layer, 0);
+      else instantiate(href, frame.m, frame.stroke, frame.fill, frame.layer, frame.handle, 0);
     } else if (tag === "text") {
       const end = svg.indexOf("<", TAG.lastIndex);
       const str = decode(svg.slice(TAG.lastIndex, end < 0 ? svg.length : end)).trim();
       const anchor = attrs["text-anchor"] === "middle" ? 1 : attrs["text-anchor"] === "end" ? 2 : 0;
       const t: Txt = { m: parent.target ? frame.m : local, x: +attrs.x || 0, y: +attrs.y || 0, size: +attrs["font-size"] || 1, anchor, str, stroke: color(attrs.stroke, UNSET), fill: color(attrs.fill, UNSET) };
       if (parent.target) parent.target.texts.push(t);
-      else emitText(t, parent.m, frame.stroke, frame.fill, frame.layer);
+      else emitText(t, parent.m, frame.stroke, frame.fill, frame.layer, frame.handle);
     } else {
       count(skipped, `tag:${tag}`);
     }
@@ -247,7 +262,7 @@ export function parseScene(svg: string, layerOf: Record<string, string>, drop: I
     verts: Float64Array.from(verts),
     items: Int32Array.from(items),
     bounds: Float64Array.from(bounds),
-    texts, colors, layers, fit: null, skipped,
+    texts, colors, layers, fit: null, handleBounds, skipped,
   };
   scene.fit = fitBox(scene);
   return scene;

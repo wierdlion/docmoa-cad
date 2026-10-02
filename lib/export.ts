@@ -23,14 +23,21 @@ export async function toPng(scene: Scene, box: Box, hidden: boolean[], filename:
 
 /**
  * PDF는 벡터여야 하므로 변환기의 SVG를 그대로 쓴다(svg2pdf). 뷰어는 DOM을 만들지 않으니 저장할 때만
- * 문자열에서 SVG 요소를 만들고, 화면과 같은 뷰·레이어 상태를 입힌다.
+ * 문자열에서 SVG 요소를 만들고, 화면과 같은 뷰·레이어 상태를 입힌다. svg2pdf는 viewBox 밖 요소도 전부
+ * 쓰므로(10MB 도면이면 PDF가 130MB) 화면 밖 엔티티와 숨긴 레이어는 요소째 뺀다.
  */
-export function materializeSvg(svgText: string, box: Box, layerOf: Record<string, string>, drop: string[], hiddenLayers: Set<string>): SVGSVGElement {
+export function materializeSvg(svgText: string, box: Box, scene: Pick<Scene, "handleBounds">, layerOf: Record<string, string>, drop: string[], hiddenLayers: Set<string>): SVGSVGElement {
   const doc = new DOMParser().parseFromString(svgText, "image/svg+xml");
   const svg = doc.documentElement as unknown as SVGSVGElement;
   if (svg.nodeName !== "svg") throw new Error("draw");
   for (const h of drop) doc.getElementById(h)?.remove();
-  if (hiddenLayers.size) for (const [h, layer] of Object.entries(layerOf)) if (hiddenLayers.has(layer)) doc.getElementById(h)?.setAttribute("display", "none");
+  const pad = Math.max(box.w, box.h) * 0.01;
+  const x0 = box.x - pad, y0 = box.y - pad, x1 = box.x + box.w + pad, y1 = box.y + box.h + pad;
+  for (const h of Object.keys(layerOf)) {
+    const b = scene.handleBounds[h];
+    const outside = b && (b[2] < x0 || b[0] > x1 || b[3] < y0 || b[1] > y1);
+    if (outside || hiddenLayers.has(layerOf[h])) doc.getElementById(h)?.remove();
+  }
   svg.setAttribute("viewBox", `${box.x} ${box.y} ${box.w} ${box.h}`);
   svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
   return svg;
@@ -84,7 +91,8 @@ export async function toPdf(svg: SVGSVGElement, box: Box, filename: string, loca
   const name = pickFont([...svg.querySelectorAll("text")].map((t) => t.textContent ?? "").join(""), locale);
   const [{ jsPDF }, { svg2pdf }, font] = await Promise.all([import("jspdf"), import("svg2pdf.js"), loadFont(name)]);
   const landscape = box.w >= box.h;
-  const pdf = new jsPDF({ orientation: landscape ? "landscape" : "portrait", unit: "mm", format: "a4" });
+  // compress: 벡터 스트림은 압축이 잘 된다. 끄면 큰 도면의 PDF가 100MB를 넘는다.
+  const pdf = new jsPDF({ orientation: landscape ? "landscape" : "portrait", unit: "mm", format: "a4", compress: true });
   pdf.addFileToVFS(`${name}.ttf`, font);
   pdf.addFont(`${name}.ttf`, name, "normal");
   pdf.setFont(name);
