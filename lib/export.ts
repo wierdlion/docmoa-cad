@@ -1,4 +1,5 @@
-import type { Box } from "./fit";
+import { draw } from "./canvas";
+import type { Box, Scene } from "./scene";
 
 const save = (blob: Blob, name: string) => {
   const url = URL.createObjectURL(blob);
@@ -9,28 +10,30 @@ const save = (blob: Blob, name: string) => {
 
 const base = (name: string) => name.replace(/\.[^.]+$/, "");
 
-/** 화면에 보이는 범위를 그대로 그림으로 저장한다. CAD 도면은 검은 배경이 기본이라 배경도 함께 굽는다. */
-export async function toPng(svg: SVGSVGElement, box: Box, filename: string, longest = 2400) {
+/** 화면에 보이는 범위를 그대로 그림으로 저장한다. 화면과 같은 렌더러로 그리므로 보이는 것과 같다. */
+export async function toPng(scene: Scene, box: Box, hidden: boolean[], filename: string, longest = 2400) {
   const scale = longest / Math.max(box.w, box.h);
   const w = Math.round(box.w * scale), h = Math.round(box.h * scale);
-  const clone = svg.cloneNode(true) as SVGSVGElement;
-  clone.setAttribute("width", String(w));
-  clone.setAttribute("height", String(h));
+  const canvas = Object.assign(document.createElement("canvas"), { width: w, height: h });
+  draw(canvas.getContext("2d")!, scene, box, w, h, 1, hidden);
+  const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"));
+  if (!blob) throw new Error("png");
+  save(blob, `${base(filename)}.png`);
+}
 
-  const img = new Image();
-  const url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(clone)], { type: "image/svg+xml" }));
-  try {
-    await new Promise((ok, fail) => { img.onload = ok; img.onerror = () => fail(new Error("png")); img.src = url; });
-    const canvas = Object.assign(document.createElement("canvas"), { width: w, height: h });
-    const ctx = canvas.getContext("2d")!;
-    ctx.fillStyle = "#000";
-    ctx.fillRect(0, 0, w, h);
-    ctx.drawImage(img, 0, 0, w, h);
-    const blob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"));
-    if (blob) save(blob, `${base(filename)}.png`);
-  } finally {
-    URL.revokeObjectURL(url);
-  }
+/**
+ * PDF는 벡터여야 하므로 변환기의 SVG를 그대로 쓴다(svg2pdf). 뷰어는 DOM을 만들지 않으니 저장할 때만
+ * 문자열에서 SVG 요소를 만들고, 화면과 같은 뷰·레이어 상태를 입힌다.
+ */
+export function materializeSvg(svgText: string, box: Box, layerOf: Record<string, string>, drop: string[], hiddenLayers: Set<string>): SVGSVGElement {
+  const doc = new DOMParser().parseFromString(svgText, "image/svg+xml");
+  const svg = doc.documentElement as unknown as SVGSVGElement;
+  if (svg.nodeName !== "svg") throw new Error("draw");
+  for (const h of drop) doc.getElementById(h)?.remove();
+  if (hiddenLayers.size) for (const [h, layer] of Object.entries(layerOf)) if (hiddenLayers.has(layer)) doc.getElementById(h)?.setAttribute("display", "none");
+  svg.setAttribute("viewBox", `${box.x} ${box.y} ${box.w} ${box.h}`);
+  svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+  return svg;
 }
 
 /**
@@ -40,18 +43,18 @@ export async function toPng(svg: SVGSVGElement, box: Box, filename: string, long
  * ponytail: 한 도면에 여러 문자를 섞어 쓰면 폰트는 그중 하나만 고른다. 섞인 도면이 문제가 되면 그때 나눈다.
  */
 const SCRIPTS: { font: string; re: RegExp }[] = [
-  { font: "NotoSansJP-Regular", re: /[\u3040-\u30ff]/ },        // 가나가 있으면 일본어
-  { font: "NanumGothic-Regular", re: /[\uac00-\ud7a3]/ },       // 한글
-  { font: "NotoSansThai-Regular", re: /[\u0e00-\u0e7f]/ },
-  { font: "NotoSansArabic-Regular", re: /[\u0600-\u06ff]/ },
-  { font: "NotoSansDevanagari-Regular", re: /[\u0900-\u097f]/ },
+  { font: "NotoSansJP-Regular", re: /[぀-ヿ]/ },        // 가나가 있으면 일본어
+  { font: "NanumGothic-Regular", re: /[가-힣]/ },       // 한글
+  { font: "NotoSansThai-Regular", re: /[฀-๿]/ },
+  { font: "NotoSansArabic-Regular", re: /[؀-ۿ]/ },
+  { font: "NotoSansDevanagari-Regular", re: /[ऀ-ॿ]/ },
 ];
 /** 한자는 글자만 봐서는 어느 쪽인지 못 가른다. 화면 언어를 힌트로 쓴다. */
 const HAN: Record<string, string> = { ja: "NotoSansJP-Regular", ko: "NanumGothic-Regular", "zh-tw": "NotoSansTC-Regular" };
 
 export function pickFont(text: string, locale: string) {
   for (const s of SCRIPTS) if (s.re.test(text)) return s.font;
-  if (/[\u3400-\u9fff\uf900-\ufaff]/.test(text)) return HAN[locale] ?? "NotoSansSC-Regular";
+  if (/[㐀-鿿豈-﫿]/.test(text)) return HAN[locale] ?? "NotoSansSC-Regular";
   return "NotoSans-Regular"; // 라틴·키릴·그리스·베트남어
 }
 
