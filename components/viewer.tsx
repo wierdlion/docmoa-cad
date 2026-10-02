@@ -197,7 +197,7 @@ export default function Viewer({ locale, t }: { locale: Locale; t: Dict }) {
           w.onmessage = (e: MessageEvent<WorkerOut>) => { w.onmessage = prev; e.data.type === "svg" ? ok(e.data.svg) : fail(new Error("save")); };
           w.postMessage({ type: "svg" } satisfies WorkerIn);
         });
-        await toPdf(materializeSvg(svgText, box, l.layerOf, l.drop, off), box, name, locale);
+        await toPdf(materializeSvg(svgText, box, l.scene, l.layerOf, l.drop, off), box, name, locale);
       }
     } catch (e) {
       setError(message(e instanceof Error ? e.message : "", "save"));
