@@ -159,7 +159,8 @@ export default function Viewer({ locale, t }: { locale: Locale; t: Dict }) {
   };
 
   return (
-    <div className="flex h-dvh flex-col bg-slate-900 text-slate-100">
+    // max-h-dvh: 외부 스크립트(광고)가 height를 auto로 덮어써도 뷰어가 화면 밖으로 자라지 않게 한다.
+    <div className="flex h-dvh max-h-dvh flex-col bg-slate-900 text-slate-100">
       <header className="flex flex-wrap items-center gap-3 border-b border-slate-700 px-4 py-3">
         <label className="cursor-pointer rounded bg-indigo-600 px-4 py-2 text-sm font-medium hover:bg-indigo-500">
           {t.open}
