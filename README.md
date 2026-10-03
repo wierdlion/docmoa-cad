@@ -131,11 +131,14 @@ jsPDF 기본 폰트는 Latin-1뿐이라 나머지 문자가 전부 깨진다. �
   [LibreDWG](https://www.gnu.org/software/libredwg/) 기반)이고, DXF 파서 @mlightcad/dxf-json(GPL-3)도 같은 저자다.
   **버전을 올리면 그 버전의 소스가 공개돼 있는지 확인할 것** — 배포하는 바이너리와 같은 소스를 가리켜야 한다. 지금 담긴
   WASM의 버전 문자열은 `LibreDWG 0.13.3.7825.246_0c9ab_dirty`(커밋 0c9ab에 미커밋 수정이 있는 빌드)라, 정확히 같은 소스를
-  우리가 보관하고 있지는 않다. GPL §6(d)의 "소스 위치 안내"는 위 저장소 링크로 하고, 요구가 오면 그 저장소에서 받아 전달한다.
+  우리가 보관하고 있지는 않다(npm 패키지에도 gitHead가 없다; dxf-json 1.2.8은 `a94d49c`). GPL §6(d)의 "소스 위치 안내"는
+  위 저장소 링크로 하고, 요구가 오면 그 저장소에서 받아 전달한다. 다음 라이브러리 업그레이드 때는 고정 커밋에서 직접 빌드할 것.
 - three.js·jsPDF·Next·React는 MIT. 폰트 8종은 OFL 1.1(`public/fonts/OFL.txt`).
 - "DWG", "AutoCAD"는 Autodesk, Inc.의 상표다. 파일 형식을 가리키는 설명적 사용만 하고 로고·제품명처럼 쓰지 않는다.
-  본체 랜딩(`docmoa.com/cad`)에 "DWG and AutoCAD are registered trademarks of Autodesk, Inc." 한 줄을 두는 것이 안전하다.
-- `tests/fixtures/`의 `sample_2018.dwg`·`example_r14.dwg`는 LibreDWG 테스트 데이터(GPL-3)이고, `ezdxf_*.dxf`는 ezdxf로 직접 만든 것이다.
+  뷰어의 빈 화면 안내문 아래에 상표 고지("DWG and AutoCAD are registered trademarks of Autodesk, Inc.")를 둔다.
+  본체 랜딩(`docmoa.com/cad`)에도 같은 한 줄을 둘 것.
+- `tests/fixtures/`의 `sample_2018.dwg`·`example_r14.dwg`는 LibreDWG 테스트 데이터(GPL-3)이고, `ezdxf_*.dxf`·`ko_notes_2018.dxf`는 ezdxf로 직접 만든 것이다.
+  **실제 도면은 어떤 것도 저장소에 넣지 않는다** — 공개 GPL 저장소라 작성사의 저작권·기밀을 침해한다.
 
 ## 알려진 한계
 

@@ -477,7 +477,13 @@ export default function Viewer({ locale, t }: { locale: Locale; t: Dict }) {
             {/* dir=ltr: 아랍어 화면(dir=rtl)에서도 도면 글자는 왼쪽부터 쓴다. 캔버스 글자 방향은 요소의 dir을 물려받는다. */}
             <canvas ref={canvas} dir="ltr" className="block h-full w-full" />
             <canvas ref={overlay} dir="ltr" className="pointer-events-none absolute inset-0 h-full w-full" />
-            {!ready && !step && <p className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-slate-500">{t.drop}</p>}
+            {!ready && !step && (
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 text-center text-sm text-slate-500">
+                <p>{t.drop}</p>
+                {/* 상표 고지. 법적 문구라 번역하지 않는다. */}
+                <p className="text-[11px] text-slate-600">DWG and AutoCAD are registered trademarks of Autodesk, Inc. This viewer is not affiliated with Autodesk.</p>
+              </div>
+            )}
             {ready && (measure || picked) && (
               <div className="absolute bottom-3 left-3 max-w-xs rounded bg-slate-900/90 px-3 py-2 text-xs text-slate-200">
                 {measure ? (

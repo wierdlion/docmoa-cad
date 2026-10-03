@@ -74,6 +74,21 @@ test("DXF(R12, CP949): $DWGCODEPAGE대로 한글을 푼다", async () => {
   assert.ok(drawing.sheets[0].scene.texts.some((t) => t.str === "한글 치수 Ø20"), drawing.sheets[0].scene.texts.map((t) => t.str).join("|"));
 });
 
+// 한글 주석·꺾쇠 치수 `<53>`·%%D(°)·%%C(Ø)·점선 레이어·한글 속성이 든 자작 도면(ezdxf). 실제 회사 도면 대신 쓴다.
+test("한글 도면: 기호와 꺾쇠 표기가 글자로 살아 있고 점선·속성이 들어온다", async () => {
+  const { drawing } = await open("ko_notes_2018.dxf");
+  const s = drawing.sheets[0].scene;
+  const strs = new Set(s.texts.map((t) => t.str));
+  assert.ok([...strs].some((v) => v.includes("치수")), "한글 텍스트");
+  assert.ok(strs.has("<53>"), "꺾쇠 치수 표기");
+  assert.ok(strs.has("5°") && strs.has("Ø20"), "%%D는 도, %%C는 지름 기호로");
+  assert.ok(strs.has("재질: SM45C") && strs.has("열처리: 노멀라이징"), "MTEXT 줄 나눔");
+  const thin = items(s).find((it) => drawing.layers[it.layer].name === "THIN")!;
+  assert.ok(thin.style.dash, "THIN 레이어는 DASHED 점선");
+  assert.deepEqual(s.ents.find((e) => e.name === "TITLE")!.attrs, [["PART", "품명: 베이스"]]);
+  for (let i = 0; i < s.verts.length; i++) assert.ok(Number.isFinite(s.verts[i]), "NaN 좌표");
+});
+
 test("decodeDxf: 2007 이후는 UTF-8, 그 전은 코드페이지", () => {
   const enc = (s: string) => new TextEncoder().encode(s).buffer as ArrayBuffer;
   assert.equal(decodeDxf(enc("  9\n$ACADVER\n  1\nAC1032\n  9\n$DWGCODEPAGE\n  3\nANSI_949\n한글")).slice(-2), "한글");
