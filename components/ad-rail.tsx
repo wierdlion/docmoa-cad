@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 
 const CLIENT = process.env.NEXT_PUBLIC_ADSENSE_CLIENT;
 /** 본체와 같은 side 유닛. 슬롯 id는 AdSense 콘솔에서 온다. */
@@ -10,9 +10,10 @@ const SLOT = "5177925548";
  * 잘못 눌리기 쉽다. 또 docmoa.com 에서만 띄운다. vercel.app 주소는 AdSense에 등록된 사이트가
  * 아니라서 거기까지 광고를 내보낼 이유가 없다.
  */
+const noop = () => () => {};
 export function AdRail({ label }: { label: string }) {
-  const [onSite, setOnSite] = useState(false);
-  useEffect(() => setOnSite(location.hostname === "docmoa.com"), []);
+  // 서버 렌더에서는 false, 클라이언트에서 주소를 보고 정한다(하이드레이션 불일치 없이).
+  const onSite = useSyncExternalStore(noop, () => location.hostname === "docmoa.com", () => false);
   useEffect(() => {
     if (!onSite) return;
     try {
