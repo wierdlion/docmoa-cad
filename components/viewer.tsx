@@ -23,6 +23,8 @@ const CLICK_PX = 4;
 const PICK = "#38bdf8", HIT = "#fb923c", MEASURE = "#facc15";
 
 type Pt = { x: number; y: number };
+/** 클릭으로 고른 엔티티의 정보. 고르는 순간 계산해 두고 화면은 이것만 읽는다. */
+type Picked = { type: string; name?: string; layer: string; attrs?: [string, string][]; length: number; area: number };
 
 export default function Viewer({ locale, t }: { locale: Locale; t: Dict }) {
   const host = useRef<HTMLDivElement>(null);
@@ -57,7 +59,7 @@ export default function Viewer({ locale, t }: { locale: Locale; t: Dict }) {
   const [light, setLight] = useState(false);
   const [measuring, setMeasuring] = useState(false);
   const [measure, setMeasure] = useState<{ length: number; area: number; n: number } | null>(null);
-  const [picked, setPicked] = useState(-1);
+  const [picked, setPicked] = useState<Picked | null>(null);
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<number[]>([]);
   const [hit, setHit] = useState(0);
@@ -153,30 +155,35 @@ export default function Viewer({ locale, t }: { locale: Locale; t: Dict }) {
 
   const clearMarks = useCallback(() => {
     mark.current = { picked: -1, hit: -1, points: [], snap: null };
-    setPicked(-1); setMeasure(null); setHits([]); setHit(0); setQuery("");
+    setPicked(null); setMeasure(null); setHits([]); setHit(0); setQuery("");
     drawMarks();
   }, [drawMarks]);
 
   const open = useCallback((file: File) => {
-    if (!/\.(dwg|dxf)$/i.test(file.name)) return;
+    // 다른 종류의 파일을 떨어뜨리면 아무 일도 없던 것처럼 보이지 않게, "지원하지 않는 형식"을 알린다.
+    if (!/\.(dwg|dxf)$/i.test(file.name)) { setError(message("read", "read")); return; }
     setStep(1); setError(""); setName(file.name); setOff(new Set()); setReady(false); setIn3d(false); setModel3(null); setLayers([]); setSheets([]); setSheet(0); setNotDrawn("");
     drawing.current = null; cache.current = null; hiddenRef.current = []; lastMs.current = 0; sheetRef.current = 0;
     mark.current = { picked: -1, hit: -1, points: [], snap: null };
-    setPicked(-1); setMeasure(null); setHits([]); setHit(0); setQuery("");
+    setPicked(null); setMeasure(null); setHits([]); setHit(0); setQuery("");
     worker.current?.terminate();
     // 파일마다 새 워커: 파싱이 실패하면 wasm 모듈이 되살아나지 않고, 워커를 버리면 그 메모리도 같이 간다.
     const w = new Worker(new URL("../lib/dwg.worker.ts", import.meta.url));
     worker.current = w;
+    /** 못 열었다. 이전 도면이 남아 있으면 열린 줄 알므로 지운다. */
+    const fail = (code: string) => {
+      setError(message(code, "open")); setStep(0);
+      drawing.current = null;
+      for (const c of [canvas.current, overlay.current]) if (c) c.getContext("2d")!.clearRect(0, 0, c.width, c.height);
+    };
     w.onmessage = (e: MessageEvent<WorkerOut>) => {
       const msg = e.data;
       if (msg.type === "step") { setStep(msg.n); return; }
-      if (msg.type === "error") {
-        setError(message(msg.code, "open")); setStep(0);
-        // 이전 도면이 남아 있으면 열린 줄 안다. 지운다.
-        for (const c of [canvas.current, overlay.current]) if (c) c.getContext("2d")!.clearRect(0, 0, c.width, c.height);
-        return;
-      }
+      if (msg.type === "error") { fail(msg.code); return; }
       const d = msg.drawing;
+      // 그릴 것이 하나도 없는 파일(깨진 파일을 라이브러리가 빈 도면으로 읽은 경우 포함)은 실패로 다룬다.
+      const first = d.sheets.findIndex((s) => s.scene.fit);
+      if (first < 0) { fail("draw"); return; }
       drawing.current = d;
       hiddenRef.current = d.layers.map((l) => l.off);
       setOff(new Set(d.layers.flatMap((l, i) => (l.off ? [i] : []))));
@@ -187,9 +194,9 @@ export default function Viewer({ locale, t }: { locale: Locale; t: Dict }) {
       setModel3(msg.model3);
       setReady(true);
       setStep(0);
-      const f = d.sheets[0].scene.fit;
-      if (!f) { setError(message("draw", "draw")); return; }
-      viewRef.current = { ...f };
+      // 모델 공간이 비어 있고 배치만 있으면 그 배치부터 연다.
+      sheetRef.current = first; setSheet(first);
+      viewRef.current = { ...d.sheets[first].scene.fit! };
       // 레이어 패널이 그려진 뒤 캔버스 크기를 재야 한다.
       requestAnimationFrame(render);
     };
@@ -227,7 +234,7 @@ export default function Viewer({ locale, t }: { locale: Locale; t: Dict }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement)?.tagName === "INPUT" || (e.target as HTMLElement)?.tagName === "SELECT" || !viewRef.current) return;
-      const b = viewRef.current, { cw, ch } = size(), k = b.w / cw;
+      const b = viewRef.current, { cw } = size(), k = b.w / cw;
       const pan: Record<string, [number, number]> = { ArrowLeft: [-60, 0], ArrowRight: [60, 0], ArrowUp: [0, -60], ArrowDown: [0, 60] };
       if (e.key === "+" || e.key === "=") zoomBy(1 / 1.3);
       else if (e.key === "-") zoomBy(1.3);
@@ -311,15 +318,24 @@ export default function Viewer({ locale, t }: { locale: Locale; t: Dict }) {
       const m = measurePoints(mark.current.points);
       setMeasure({ ...m, n: mark.current.points.length });
     } else {
-      const ent = pick(s, p.x, p.y, tol(), hiddenRef.current);
-      mark.current.picked = ent;
-      setPicked(ent);
+      const i = pick(s, p.x, p.y, tol(), hiddenRef.current);
+      mark.current.picked = i;
+      const e = i >= 0 ? s.ents[i] : null;
+      setPicked(e ? { type: e.type, name: e.name, layer: drawing.current?.layers[e.layer]?.name ?? "", attrs: e.attrs, ...measureEnt(s, i) } : null);
     }
     drawMarks();
   };
 
+  /** 화면에 실제로 보이는 도면 범위. 뷰 상자는 짧은 쪽에 맞춰 가운데 놓이므로 긴 쪽으로는 상자보다 더 보인다. 저장은 이 범위로 한다. */
+  const visible = (): Box | null => {
+    const b = viewRef.current;
+    if (!b) return null;
+    const { cw, ch } = size(), tf = viewTransform(b, cw, ch);
+    return { x: -tf.ox / tf.s, y: -tf.oy / tf.s, w: cw / tf.s, h: ch / tf.s };
+  };
+
   const download = async (kind: "png" | "pdf") => {
-    const cur = current(), box = viewRef.current;
+    const cur = current(), box = visible();
     if (!cur || !box) return;
     setSaving(kind); setError("");
     try {
@@ -337,9 +353,9 @@ export default function Viewer({ locale, t }: { locale: Locale; t: Dict }) {
     const d = drawing.current;
     if (d) { hiddenRef.current = d.layers.map((_, i) => next.has(i)); render(); }
   };
-  const toggle = (i: number) => { const next = new Set(off); next.has(i) ? next.delete(i) : next.add(i); setHidden(next); };
+  const toggle = (i: number) => { const next = new Set(off); if (next.has(i)) next.delete(i); else next.add(i); setHidden(next); };
   const shown = layers.filter((l) => !filter || l.name.toLowerCase().includes(filter.toLowerCase()));
-  const allTo = (on: boolean) => { const next = new Set(off); for (const l of shown) on ? next.delete(l.i) : next.add(l.i); setHidden(next); };
+  const allTo = (on: boolean) => { const next = new Set(off); for (const l of shown) if (on) next.delete(l.i); else next.add(l.i); setHidden(next); };
 
   const switchSheet = (i: number) => {
     sheetRef.current = i; setSheet(i); cache.current = null; lastMs.current = 0;
@@ -370,8 +386,7 @@ export default function Viewer({ locale, t }: { locale: Locale; t: Dict }) {
   const toggleMeasure = () => { setMeasuring((v) => !v); mark.current.points = []; mark.current.snap = null; setMeasure(null); drawMarks(); };
 
   const u = unit ? ` ${unit}` : "";
-  const ent = picked >= 0 ? scene()?.ents[picked] : null;
-  const entMeasure = ent && scene() ? measureEnt(scene()!, picked) : null;
+  const fg = (light ? LIGHT : DARK).fg;
   const btn = "rounded border border-slate-600 px-3 py-1.5 text-sm hover:bg-slate-800 disabled:opacity-50";
   const on = "rounded bg-indigo-600 px-3 py-1.5 text-sm hover:bg-indigo-500";
 
@@ -388,13 +403,18 @@ export default function Viewer({ locale, t }: { locale: Locale; t: Dict }) {
         {name && <span className="max-w-48 truncate text-sm text-slate-400" title={name}>{name}</span>}
         {step > 0 && <span className="text-sm text-amber-400">{t.opening} {step}/3 <span className="ml-1 inline-block h-1.5 w-16 animate-pulse rounded bg-amber-400/70 align-middle" /></span>}
         {/* GPL-3 배포 의무: 라이선스와 소스 위치를 화면에 알린다. */}
-        <a href="https://github.com/wierdlion/docmoa-cad" target="_blank" rel="noopener" className="ms-auto text-xs text-slate-500 hover:text-slate-300">GPL-3.0 · Source (LibreDWG)</a>
+        <a href="https://github.com/wierdlion/docmoa-cad" target="_blank" rel="noopener license" title="Free software, GNU GPL-3.0, no warranty. Source code of this viewer and of LibreDWG (the DWG parser it ships)."
+          className="ms-auto text-xs text-slate-500 hover:text-slate-300">GPL-3.0 · Source (LibreDWG)</a>
         {error && <span className="text-sm text-red-400">{error}</span>}
         {ready && (
           <div className="ml-auto flex flex-wrap items-center gap-2">
             <span className="flex items-center rounded border border-slate-600">
               <input type="search" value={query} onChange={(e) => onQuery(e.target.value)} placeholder={t.search} aria-label={t.search}
-                onKeyDown={(e) => { if (e.key === "Enter" && hits.length) { goTo(hits, (hit + (e.shiftKey ? hits.length - 1 : 1)) % hits.length); e.preventDefault(); } }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && hits.length) { goTo(hits, (hit + (e.shiftKey ? hits.length - 1 : 1)) % hits.length); e.preventDefault(); }
+                  // Esc: 검색을 끝내고 초점을 돌려줘서 +/−/0 단축키가 다시 듣게 한다.
+                  else if (e.key === "Escape") { clearMarks(); e.currentTarget.blur(); }
+                }}
                 className="w-36 bg-transparent px-2 py-1.5 text-sm outline-none" />
               {query && <span className="px-2 text-xs text-slate-400">{hits.length ? hit + 1 : 0}/{hits.length}</span>}
             </span>
@@ -444,7 +464,7 @@ export default function Viewer({ locale, t }: { locale: Locale; t: Dict }) {
               {shown.map((l) => (
                 <label key={l.i} className="flex items-center gap-2 py-1 text-slate-400">
                   <input type="checkbox" checked={!off.has(l.i)} onChange={() => toggle(l.i)} />
-                  <span className="inline-block h-3 w-3 shrink-0 rounded-sm border border-slate-600" style={{ background: l.color === "fg" ? theme().fg : l.color }} />
+                  <span className="inline-block h-3 w-3 shrink-0 rounded-sm border border-slate-600" style={{ background: l.color === "fg" ? fg : l.color }} />
                   <span className="truncate" title={l.name}>{l.name}</span>
                 </label>
               ))}
@@ -454,24 +474,25 @@ export default function Viewer({ locale, t }: { locale: Locale; t: Dict }) {
         <div className="relative flex min-w-0 flex-1 flex-col">
           <div ref={host} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
             className={`relative min-h-0 flex-1 touch-none ${light ? "bg-white" : "bg-black"} ${in3d ? "invisible" : ""} ${measuring ? "cursor-crosshair" : ""}`}>
-            <canvas ref={canvas} className="block h-full w-full" />
-            <canvas ref={overlay} className="pointer-events-none absolute inset-0 h-full w-full" />
+            {/* dir=ltr: 아랍어 화면(dir=rtl)에서도 도면 글자는 왼쪽부터 쓴다. 캔버스 글자 방향은 요소의 dir을 물려받는다. */}
+            <canvas ref={canvas} dir="ltr" className="block h-full w-full" />
+            <canvas ref={overlay} dir="ltr" className="pointer-events-none absolute inset-0 h-full w-full" />
             {!ready && !step && <p className="pointer-events-none absolute inset-0 flex items-center justify-center text-sm text-slate-500">{t.drop}</p>}
-            {ready && (measure || ent) && (
+            {ready && (measure || picked) && (
               <div className="absolute bottom-3 left-3 max-w-xs rounded bg-slate-900/90 px-3 py-2 text-xs text-slate-200">
                 {measure ? (
                   <p>{t.dist}: {fmt(measure.length)}{u}{measure.n >= 3 && <> · {t.area}: {fmt(measure.area)}{u && `${u}²`}</>}</p>
-                ) : ent && (
+                ) : picked && (
                   <>
-                    <p>{t.type}: {ent.type}{ent.name && <> · {t.block}: {ent.name}</>}</p>
-                    <p>{t.layer}: {drawing.current?.layers[ent.layer]?.name}</p>
-                    {entMeasure && entMeasure.length > 0 && <p>{t.length}: {fmt(entMeasure.length)}{u}{entMeasure.area > 0 && <> · {t.area}: {fmt(entMeasure.area)}{u && `${u}²`}</>}</p>}
-                    {ent.attrs?.map(([k, v]) => <p key={k}>{k}: {v}</p>)}
+                    <p>{t.type}: {picked.type}{picked.name && <> · {t.block}: {picked.name}</>}</p>
+                    <p>{t.layer}: {picked.layer}</p>
+                    {picked.length > 0 && <p>{t.length}: {fmt(picked.length)}{u}{picked.area > 0 && <> · {t.area}: {fmt(picked.area)}{u && `${u}²`}</>}</p>}
+                    {picked.attrs?.map(([k, v]) => <p key={k}>{k}: {v}</p>)}
                   </>
                 )}
               </div>
             )}
-            {ready && notDrawn && !measure && !ent && <p className="pointer-events-none absolute bottom-3 right-3 hidden max-w-md truncate text-xs text-slate-500 sm:block" title={notDrawn}>{notDrawn}</p>}
+            {ready && notDrawn && !measure && !picked && <p className="pointer-events-none absolute bottom-3 right-3 hidden max-w-md truncate text-xs text-slate-500 sm:block" title={notDrawn}>{notDrawn}</p>}
           </div>
           {sheets.length > 1 && (
             <div className="flex gap-1 overflow-x-auto border-t border-slate-700 px-2 py-1 text-xs">

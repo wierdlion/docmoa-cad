@@ -17,11 +17,20 @@ export type Cad = {
  * step은 진행 단계(1 읽기, 2 풀기, 3 장면 만들기)를 알린다.
  */
 export async function readCad(buf: ArrayBuffer, filename: string, wasmDir = WASM_DIR, step: (n: number) => void = () => {}, measure?: BuildOpts["measure"]): Promise<Cad> {
+  // DXF는 WASM이 못 읽는다(libredwg-web의 DXF 분기가 비어 있다). JS 파서로 읽어 같은 모양의 데이터를 만든다.
+  if (/\.dxf$/i.test(filename)) {
+    const { parseDxf } = await import("./dxf");
+    step(1);
+    const { db, solids, model } = parseDxf(buf);
+    step(2);
+    const model3 = extract3d(model, (e) => solids.get((e as { handle?: string }).handle ?? "") ?? null);
+    step(3);
+    return { drawing: buildDrawing(db, { solids, measure }), model3 };
+  }
   // 파싱이 실패하면 emscripten 모듈이 abort되고 되살아나지 않는다. 그래서 파일마다 새로 만든다.
   const lib = await LibreDwg.create(wasmDir);
   step(1);
-  const type = /\.dxf$/i.test(filename) ? Dwg_File_Type.DXF : Dwg_File_Type.DWG;
-  const dwg = lib.dwg_read_data(buf, type);
+  const dwg = lib.dwg_read_data(buf, Dwg_File_Type.DWG);
   if (dwg == null) throw new Error("read");
   step(2);
   const db = lib.convert(dwg);

@@ -29,8 +29,8 @@ export type Db = {
 
 /** 도면의 글자 높이는 대문자 높이다. 화면 글꼴의 em은 그보다 크다(Arial·Helvetica 기준 0.72). */
 const CAP = 0.72;
-/** DWG 선굵기 번호 → 1/100 mm */
-const LW = [0, 5, 9, 13, 15, 18, 20, 25, 30, 35, 40, 50, 53, 60, 70, 80, 90, 100, 106, 120, 140, 158, 200, 211];
+/** DWG 선굵기 번호 → 1/100 mm. `dxf.ts`가 DXF의 1/100mm 값을 이 번호로 되돌리는 데도 쓴다. */
+export const LW = [0, 5, 9, 13, 15, 18, 20, 25, 30, 35, 40, 50, 53, 60, 70, 80, 90, 100, 106, 120, 140, 158, 200, 211];
 const DEFAULT_LW = 0.25;
 const UNITS: Record<number, string> = { 1: "in", 2: "ft", 4: "mm", 5: "cm", 6: "m", 7: "km" };
 const BYLAYER = -1, BYBLOCK = -2;
@@ -225,7 +225,7 @@ export function buildDrawing(db: Db, opts: BuildOpts = {}): Drawing {
     const loops: number[][] = [];
     for (const path of e.boundaryPaths ?? []) {
       if (!path) continue;
-      let pts: number[] = [];
+      const pts: number[] = [];
       if (path.vertices) {
         const vs: E[] = path.vertices;
         for (let i = 0; i < vs.length; i++) { const q = vs[(i + 1) % vs.length]; pts.push(...bulgeArc(vs[i].x, vs[i].y, q.x, q.y, vs[i].bulge || 0).slice(0, -2)); }

@@ -1,4 +1,5 @@
-이 폴더의 폰트는 모두 SIL Open Font License 1.1로 배포된다. 아래 라이선스 전문이 둘 다에 적용된다.
+이 폴더의 폰트 8종은 모두 SIL Open Font License 1.1로 배포된다. 아래 라이선스 전문이 전부에 적용된다.
+폰트는 고치지 않고 그대로 담았고, PDF로 저장할 때 쓰인 글자만 추려 문서에 심는다(OFL이 허용하는 embedding).
 
 - NanumGothic-Regular.ttf — Copyright (c) 2010, NHN Corporation
 - NotoSans*.ttf (Noto Sans, JP, SC, TC, Thai, Arabic, Devanagari)

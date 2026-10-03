@@ -16,9 +16,21 @@ GPL이 되므로, 합치지 말 것.
 
 ```bash
 npm install     # postinstall이 wasm을 public/wasm/으로 복사한다
-npm run dev     # http://localhost:3457/cad
-npm test        # 도면 파싱 스모크 테스트
+npm run dev     # http://localhost:3457/cad/view
+npm test        # 도면 파싱·장면·DXF 단위 테스트
+npm run lint    # eslint (eslint-config-next). 렌더 중 ref 접근 같은 React 규칙까지 본다
 ```
+
+## DXF
+
+libredwg-web 0.7.14의 WASM은 DXF를 못 읽는다(`dwg_read_data`의 DXF 분기가 주석 처리돼 있어 어떤 DXF든 null).
+그래서 DXF는 같은 저자의 JS 파서 [@mlightcad/dxf-json](https://www.npmjs.com/package/@mlightcad/dxf-json)(GPL-3)으로
+읽고, `lib/dxf.ts`가 그 결과를 libredwg-web `convert`와 같은 모양으로 바꿔 `lib/build.ts`에 넘긴다. 파서는 DXF를 열 때만
+받는다(워커의 동적 import). 맞춰 주는 것: 각도(도→라디안), 선굵기(1/100mm→libredwg 번호), 블록 엔티티(`blocks`→BLOCK_RECORD),
+INSERT 뒤에 따로 오는 ATTRIB, R12의 `$Model_Space` 이름과 LAYOUT 없음. R2007 이전 파일은 `$DWGCODEPAGE`(CP949 등)로
+풀고, R12는 블록 끝 표식(`100 AcDbBlockEnd`)이 없어 dxf-json이 블록 하나로 파일 끝까지 삼키므로 표식을 끼워 넣는다(`patchR12`).
+입체(3DSOLID)의 ACIS 글자는 dxf-json이 되돌려 주어 R2010까지는 모서리가 나온다. 샘플은 ezdxf로 만든 `tests/fixtures/ezdxf_*.dxf`다(배치·뷰포트가 든
+유일한 샘플이기도 하다). CP949 샘플은 바이트가 UTF-8이 아니라 `tests/dxf.test.mts` 안에서 만든다.
 
 ## 그리는 방법
 
@@ -30,13 +42,15 @@ libredwg-web이 DWG를 JS 객체로 풀어 주면(`lib.convert`), `lib/build.ts`
 - 파싱과 장면 만들기는 워커(`lib/dwg.worker.ts`)에서 끝나고 메인 스레드에는 TypedArray만 넘어온다.
 - `lib/canvas.ts`가 스타일(색·점선·굵기)별로 묶어 그린다. 끄는 동안은 마지막 그림을 옮겨 보여주고
   멈추면 다시 그린다. PDF는 같은 `drawSheet`를 jsPDF 명령으로 바꿔 주는 가짜 컨텍스트(`lib/export.ts`)로
-  돌리므로 화면에 보이는 그대로 나온다. PNG는 같은 코드를 오프스크린 캔버스에 그린 것이다.
+  돌리므로 화면에 보이는 그대로 나온다. PNG는 같은 코드를 오프스크린 캔버스에 그린 것이다. 저장 범위는 뷰 상자가
+  아니라 **화면에 실제로 보이는 범위**(캔버스 비율로 넓힌 것)이고, PDF 용지 방향도 그 비율을 따른다.
 - 글자: 도면의 글자 높이는 대문자 높이라 글꼴 em은 그 1/0.72배로 잡는다. 정렬된 글자는 파일에 든
   시작점과 정렬점에서 실제 폭을 알아내어, 글꼴이 달라도 그 폭에 맞춘다(`TextItem.w`).
 - 레이어: 꺼짐·동결 레이어는 꺼진 채 열린다. 블록 안 엔티티는 자기 레이어를 따르고, 레이어 0인 것만
   삽입의 레이어를 물려받는다(AutoCAD와 같음). 동결 레이어에 삽입된 블록은 통째로 그 레이어와 숨는다.
 - 배치(종이 공간) 탭: 뷰포트 안에 모델 장면을 축척대로 잘라 넣는다. 뷰 비틀림(twist)과 뷰포트별 동결
-  레이어는 반영하지 않는다. 실제 배치가 든 샘플 파일이 없어 단위 테스트로만 검증했다.
+  레이어는 반영하지 않는다. 배치가 든 DWG 샘플은 없고 DXF 샘플(`tests/fixtures/ezdxf_2018.dxf`의 Sheet1)로 검증한다.
+  모델 공간이 비어 있고 배치만 있으면 그 배치부터 연다.
 - MTEXT 줄바꿈: 워커가 OffscreenCanvas로 화면과 같은 글꼴의 폭을 재서 상자 폭(`rectWidth`)에 맞춰 띄어쓰기에서
   끊는다. 폭보다 긴 한 단어는 한중일만 글자 단위로 끊고 라틴 단어는 넘치게 둔다(글꼴 폭이 AutoCAD와 달라 단어
   중간을 자르면 더 나쁘다). OffscreenCanvas가 없으면 어림 폭을 쓴다.
@@ -46,9 +60,11 @@ libredwg-web이 DWG를 JS 객체로 풀어 주면(`lib.convert`), `lib/build.ts`
 - 그리지 않는 것: POINT(PDMODE 0이면 점 하나), WIPEOUT(그리기 순서 표 SORTENTS가 없어 가리기를 재현하면
   멀쩡한 선을 지울 수 있다), IMAGE·OLE2FRAME(그림 데이터가 파일 밖에 있다). 화면 오른쪽 아래에 종류와 개수를 보여준다.
 
-뷰어 기능: 글자 검색(Enter 다음, Shift+Enter 이전), 측정(점 클릭, 끝점 자동 붙음, Esc), 클릭으로
-엔티티 정보(종류·레이어·블록·길이·면적·속성값), 레이어 필터·전체 켜기/끄기·색 표시, 흰 배경, +/−/0
-단축키와 화살표 이동, 드래그 앤 드롭, 용지 크기(A4~A0)·색 유지·PNG 크기 옵션.
+뷰어 기능: 글자 검색(Enter 다음, Shift+Enter 이전, Esc로 끝내면 단축키가 다시 듣는다), 측정(점 클릭, 끝점 자동
+붙음, Esc), 클릭으로 엔티티 정보(종류·레이어·블록·길이·면적·속성값 — 고르는 순간 계산해 state에 둔다), 레이어
+필터·전체 켜기/끄기·색 표시, 흰 배경, +/−/0 단축키와 화살표 이동, 드래그 앤 드롭(DWG·DXF가 아닌 파일은 "지원하지 않는
+형식"으로 알린다), 용지 크기(A4~A0)·색 유지·PNG 크기 옵션. 그릴 것이 하나도 없는 파일(깨진 파일을 라이브러리가 빈 도면으로
+읽은 경우 포함)은 실패로 다뤄 이전 도면을 지운다.
 
 ## 언어
 
@@ -107,6 +123,19 @@ jsPDF 기본 폰트는 Latin-1뿐이라 나머지 문자가 전부 깨진다. �
 
 지원하는 모서리 곡선은 `straight-curve`와 `ellipse-curve`다. `intcurve`(스플라인)는 못 그리고,
 몇 개를 못 그렸는지 화면에 표시한다.
+
+## 라이선스·상표
+
+- 이 앱: GPL-3.0-or-later(`LICENSE`). 뷰어 헤더의 "GPL-3.0 · Source" 링크가 이 저장소를 가리킨다(GPL이 요구하는
+  소스 제공). 포함한 WASM은 [@mlightcad/libredwg-web](https://github.com/mlightcad/libredwg-web) 0.7.14(GPL-3,
+  [LibreDWG](https://www.gnu.org/software/libredwg/) 기반)이고, DXF 파서 @mlightcad/dxf-json(GPL-3)도 같은 저자다.
+  **버전을 올리면 그 버전의 소스가 공개돼 있는지 확인할 것** — 배포하는 바이너리와 같은 소스를 가리켜야 한다. 지금 담긴
+  WASM의 버전 문자열은 `LibreDWG 0.13.3.7825.246_0c9ab_dirty`(커밋 0c9ab에 미커밋 수정이 있는 빌드)라, 정확히 같은 소스를
+  우리가 보관하고 있지는 않다. GPL §6(d)의 "소스 위치 안내"는 위 저장소 링크로 하고, 요구가 오면 그 저장소에서 받아 전달한다.
+- three.js·jsPDF·Next·React는 MIT. 폰트 8종은 OFL 1.1(`public/fonts/OFL.txt`).
+- "DWG", "AutoCAD"는 Autodesk, Inc.의 상표다. 파일 형식을 가리키는 설명적 사용만 하고 로고·제품명처럼 쓰지 않는다.
+  본체 랜딩(`docmoa.com/cad`)에 "DWG and AutoCAD are registered trademarks of Autodesk, Inc." 한 줄을 두는 것이 안전하다.
+- `tests/fixtures/`의 `sample_2018.dwg`·`example_r14.dwg`는 LibreDWG 테스트 데이터(GPL-3)이고, `ezdxf_*.dxf`는 ezdxf로 직접 만든 것이다.
 
 ## 알려진 한계
 
